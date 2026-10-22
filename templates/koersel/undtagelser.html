@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Undtagelser{% endblock %}
+{% block stepper %}{% include "koersel/_stepper.html" %}{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>Udfyld undtagelser · {{ koersel.navn }}</h1>
+  <span class="sub" id="cnt">{{ klar }} af {{ linjer|length }} klar</span>
+</div>
+<p class="sub">Rettelser her gælder kun denne måned. Felter, der ikke er relevante for den valgte transport, slås fra.</p>
+{% for g in generelt %}<div class="flash error">{{ g }}</div>{% endfor %}
+
+<form method="post" id="undtagelser" data-zoner="{{ zoner|join:',' }}">
+  {% csrf_token %}
+  <div class="rows">
+    <div class="row head-row g3"><span>Borger</span><span>Transport</span><span>Zoner</span><span>Individuel beregning</span><span>Status</span></div>
+    {% for l in linjer %}
+    <div class="row g3" data-linje data-sats-mangler="{% if l.sats_mangler %}1{% endif %}">
+      <div>
+        <p class="nm">{{ l.borger.navn }}</p>
+        <p class="mu">{{ l.timer_tekst }} timer · {{ l.borger.afstand_km|floatformat:1 }} km{% if l.dobbelt %} · navn flere gange i filen{% endif %}
+          {% if l.sats_mangler %}· <a href="{% url 'borger_ret' l.borger.pk %}">angiv sats</a>{% endif %}</p>
+      </div>
+      <select name="t_{{ l.pk }}" data-felt="t" aria-label="Transport for {{ l.borger.navn }}">
+        <option value="" {% if not l.transport %}selected{% endif %}>Vælg</option>
+        {% for kode, navn in transport_valg %}<option value="{{ kode }}" {% if l.transport == kode %}selected{% endif %}>{{ navn }}</option>{% endfor %}
+      </select>
+      <select name="z_{{ l.pk }}" data-felt="z" aria-label="Zoner for {{ l.borger.navn }}">
+        <option value="">-</option>
+        {% for z in zoner %}<option value="{{ z }}" {% if l.zoner == z %}selected{% endif %}>{{ z }}</option>{% endfor %}
+      </select>
+      <div class="ind">
+        <input type="checkbox" name="i_{{ l.pk }}" data-felt="i" aria-label="Individuel beregning for {{ l.borger.navn }}" {% if l.individuel %}checked{% endif %}>
+        <input type="number" min="1" max="31" name="d_{{ l.pk }}" data-felt="d" placeholder="Dage" aria-label="Fremmødedage for {{ l.borger.navn }}" value="{{ l.dage|default_if_none:'' }}">
+      </div>
+      <span class="badge {{ l.status_klasse }}" data-felt="st" title="{{ l.fejl|join:' ' }}">{{ l.status_tekst }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="actions">
+    <a class="btn" href="{% url 'gennemse' koersel.pk %}">Tilbage</a>
+    <button type="submit" name="handling" value="gem">Gem kladde</button>
+    <button class="primary" type="submit" name="handling" value="beregn" id="beregn">Beregn</button>
+    <span class="msg" id="msg" role="alert"></span>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/undtagelser.js' %}"></script>{% endblock %}

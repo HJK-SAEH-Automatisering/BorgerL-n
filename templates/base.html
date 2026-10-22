@@ -1,0 +1,28 @@
+{% load static %}<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}BorgerLøn{% endblock %} · BorgerLøn</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  {% if user.is_authenticated %}
+  <nav class="topbar">
+    <span class="brand">BorgerLøn · Løn og kørsel</span>
+    <a href="{% url 'dashboard' %}">Kørsler</a>
+    <a href="{% url 'borger_liste' %}">Borgere</a>
+    {% if user.is_staff %}<a href="{% url 'admin:index' %}">Stamdata og log</a>{% endif %}
+    <span class="spacer"></span>
+    <span>{{ user.get_username }}</span>
+    <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link" type="submit">Log ud</button></form>
+  </nav>
+  {% endif %}
+  {% block stepper %}{% endblock %}
+  <main class="wrap {% block wrapclass %}{% endblock %}">
+    {% for m in messages %}<div class="flash {{ m.level_tag }}" role="status">{{ m }}</div>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

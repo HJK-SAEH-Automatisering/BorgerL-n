@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Upload fra Punchly{% endblock %}
+{% block stepper %}{% include "koersel/_stepper.html" %}{% endblock %}
+{% block wrapclass %}smal{% endblock %}
+{% block content %}
+<h1>Upload månedens timefil · {{ koersel.navn }}</h1>
+<p class="sub">Vælg den Excel-fil (.xlsx), du har hentet fra Punchly. Filen skal have kolonnerne "Navn" og "Total timer (timer:minutter)".</p>
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  <div class="drop">
+    <p id="filnavn" style="margin:0 0 10px">{% if koersel.filnavn %}Sidst uploadet: {{ koersel.filnavn }}{% else %}Ingen fil valgt{% endif %}</p>
+    <input type="file" name="fil" id="fil" accept=".xlsx">
+  </div>
+  <div class="actions">
+    <button class="primary" type="submit">Læs filen</button>
+    {% if fejl %}<span class="msg bad" role="alert">{{ fejl }}</span>{% endif %}
+  </div>
+</form>
+{% if koersel.linjer.exists %}
+<p class="sub" style="margin-top:14px">Der er allerede uploadet en fil til denne måned. Uploades en ny, erstattes rækkerne og dine rettelser i trin 3.
+  <a href="{% url 'gennemse' koersel.pk %}">Fortsæt med den eksisterende</a>.</p>
+{% endif %}
+{% endblock %}

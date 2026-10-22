@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Borgere{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>Borgerregister</h1>
+  <a class="btn primary" href="{% url 'borger_ny' %}">Opret borger</a>
+</div>
+<form method="get" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+  <input type="search" name="q" value="{{ q }}" placeholder="Søg på navn eller Tj.nr." aria-label="Søg borger" style="min-width:260px">
+  <button type="submit">Søg</button>
+  <a class="btn" href="?vis=alle">Vis også inaktive</a>
+</form>
+<div class="rows">
+  <div class="row head-row" style="grid-template-columns: minmax(0,1.4fr) 110px minmax(0,1fr) 100px 110px 90px 80px"><span>Navn</span><span>Tj.nr.</span><span>Afdeling</span><span>Afstand</span><span>Transport</span><span>Sats</span><span></span></div>
+  {% for b in borgere %}
+  <div class="row" style="grid-template-columns: minmax(0,1.4fr) 110px minmax(0,1fr) 100px 110px 90px 80px">
+    <span class="nm">{{ b.navn }}{% if not b.aktiv %} <span class="badge warn">Inaktiv</span>{% endif %}</span>
+    <span>{{ b.tj_nr|default_if_none:"-" }}</span>
+    <span>{{ b.afdeling|default_if_none:"-" }}</span>
+    <span>{{ b.afstand_km|floatformat:1 }} km</span>
+    <span>{{ b.get_transport_display|default:"-" }}</span>
+    <span>{% if b.sats %}{{ b.sats|floatformat:2 }} kr{% else %}<span class="badge bad">Mangler</span>{% endif %}</span>
+    <a class="btn" href="{% url 'borger_ret' b.pk %}">Ret</a>
+  </div>
+  {% empty %}
+  <div class="row"><span class="mu">Ingen borgere fundet.</span></div>
+  {% endfor %}
+</div>
+{% endblock %}
