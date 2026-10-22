@@ -29,10 +29,6 @@ eller nummeret på den rapport opgaven kom af.>
 
 | Emne |
 |---|
-| Bekræft beregningsreglerne med en fagperson: individuel beregning, afrunding og reduceret takst |
-| Afprøv importen på en rigtig eksport fra Punchly |
-| Afklar hosting, login med Entra ID og opbevaring af CPR og PDF-rapporter med IT og DPO |
-| Afprøv MSSQL og kør parallelt med Excel-arket i 1-2 måneder |
 | Skriv README om, så den er til brugere og ikke til udviklere |
 | Indlæs `.env` automatisk i indstillingerne |
 | Indfør versionsnummer, start på 0.1.0, før første udrulning |
