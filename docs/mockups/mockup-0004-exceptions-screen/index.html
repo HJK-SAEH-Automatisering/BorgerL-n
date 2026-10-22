@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKITSE — Udfyld undtagelser</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #fff; --text: #1d2330; --mu: #667085; --border: #e1e4ea;
+    --primary: #1f5fbf; --primary-d: #184c99;
+    --ok-bg: #e4f4e8; --ok: #17692c; --warn-bg: #fdf0d5; --warn: #8a5a00;
+    --err-bg: #fde4e4; --err: #a11a1a; --info-bg: #e3edfb; --info: #1f4f99;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--text); }
+  .sketch-band { position: sticky; top: 0; z-index: 50; background: #1d2330; color: #ffd84d; text-align: center;
+    font-weight: 700; letter-spacing: .12em; padding: 6px 10px; font-size: 13px; border-bottom: 3px solid #ffd84d; }
+  header.app { background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 24px; display: flex; align-items: center; gap: 24px; }
+  header.app .logo { font-weight: 700; }
+  header.app nav { display: flex; gap: 16px; color: var(--mu); }
+  header.app .user { margin-left: auto; color: var(--mu); font-size: 13px; }
+  main { max-width: 1000px; margin: 0 auto; padding: 18px 24px 60px; }
+
+  .stepper { display: flex; gap: 8px; margin-bottom: 18px; }
+  .step { flex: 1; padding: 8px 12px; border-radius: 8px; background: var(--card); border: 1px solid var(--border); color: var(--mu); font-size: 13px; display: flex; gap: 8px; align-items: center; }
+  .step b { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--border); color: var(--text); font-size: 12px; }
+  .step.done b { background: var(--ok); color: #fff; }
+  .step.on { border-color: var(--primary); color: var(--text); font-weight: 600; }
+  .step.on b { background: var(--primary); color: #fff; }
+
+  .head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0; }
+  .sub, .mu { color: var(--mu); }
+  .sub { font-size: 14px; }
+
+  .rows { margin-top: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: minmax(230px, 2.2fr) 150px 90px 190px 140px; gap: 12px; align-items: center; padding: 9px 14px; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: none; }
+  .row.head-row { background: #f0f2f6; color: var(--mu); font-size: 13px; font-weight: 600; }
+  .nm { margin: 0; font-weight: 600; }
+  .row p.mu { margin: 0; font-size: 13px; }
+  .row a { color: var(--primary); cursor: pointer; text-decoration: underline; }
+  select, input[type=number] { font: inherit; padding: 5px 8px; border: 1px solid #c9ced8; border-radius: 6px; background: #fff; max-width: 100%; }
+  select:disabled, input:disabled { background: #eef0f4; color: #9aa1af; cursor: not-allowed; }
+  .ind { display: flex; gap: 8px; align-items: center; }
+  .ind input[type=checkbox] { width: 18px; height: 18px; }
+  .ind input[type=number] { width: 80px; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }
+  .badge.ok { background: var(--ok-bg); color: var(--ok); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.bad { background: var(--err-bg); color: var(--err); }
+
+  button, .btn { font: inherit; padding: 7px 14px; border: 1px solid var(--border); background: var(--card); border-radius: 7px; cursor: pointer; color: var(--text); }
+  button:hover { background: #eef0f4; }
+  button.primary { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
+  button.primary:hover { background: var(--primary-d); }
+  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 16px 0; }
+  .msg { font-size: 14px; padding: 6px 10px; border-radius: 6px; }
+  .msg.bad { background: var(--err-bg); color: var(--err); }
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: #1d2330; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 80vw; text-align: center; }
+  .toast.show { opacity: 1; }
+  @media (max-width: 860px) { .row { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<div class="sketch-band">SKITSE — fiktive data</div>
+
+<header class="app">
+  <span class="logo">BorgerLøn</span>
+  <nav><span>Kørsler</span><span>Borgere</span><span>Stamdata</span><span>Audit</span></nav>
+  <span class="user">Administrativ medarbejder</span>
+</header>
+
+<main>
+  <div class="stepper">
+    <div class="step done"><b>✓</b> Upload</div>
+    <div class="step done"><b>✓</b> Gennemse transport</div>
+    <div class="step on"><b>3</b> Undtagelser</div>
+    <div class="step"><b>4</b> Godkend</div>
+  </div>
+
+  <div class="head">
+    <h1>Udfyld undtagelser · september 2026</h1>
+    <span class="sub" id="cnt"></span>
+  </div>
+  <p class="sub">Rettelser her gælder kun denne måned. Felter, der ikke er relevante for den valgte transport, slås fra.</p>
+
+  <div class="rows" id="rows"></div>
+
+  <div class="actions">
+    <button id="back">Tilbage</button>
+    <button id="draft">Gem kladde</button>
+    <button class="primary" id="calc">Beregn</button>
+    <span class="msg" id="msg" role="alert"></span>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ---- Fiktive data (ingen rigtige personer, ingen personnumre) ----
+  var ZONES = [1, 2, 3, 4, 5, 6];
+  var TRANSPORT = { taxa: "Taxa", selv: "Kører selv", ingen: "Ingen udgift" };
+
+  var lines = [
+    { name: "Karen Vestergaard Mikkelsen", min: 82*60+30, km: 8.2,  t: "taxa", z: "", ind: false, d: "" },
+    { name: "Jens Ove Thorsager",          min: 61*60+15, km: 3.5,  t: "selv", z: "2", ind: false, d: "" },
+    { name: "Pia Hammershøj",              min: 58*60+20, km: 12.4, t: "selv", z: "4", ind: false, d: "" },
+    { name: "Mette Lundgaard",             min: 44*60+20, km: 13.2, t: "selv", z: "3", ind: true, d: "4" },
+    { name: "Brian Sandholt Kjeldsen",     min: 96*60+45, km: 0.8,  t: "ingen", z: "", ind: false, d: "" },
+    { name: "Fatima Al-Rashid",            min: 70*60,    km: 17.9, t: "taxa", z: "", ind: false, d: "" },
+    { name: "Anne-Mette Sofie Kristensen-Brandt Holm Nielsen", min: 38*60+10, km: 6.0, t: "taxa", z: "", ind: false, d: "" },
+    { name: "Ole Brøndum",                 min: 55*60+40, km: 11.3, t: "", z: "", ind: false, d: "" },
+    { name: "Gitte Marie Rønnow",          min: 31*60+10, km: 15.7, t: "selv", z: "5", ind: false, d: "", noRate: true },
+    { name: "Sofie Rask",                  min: 88*60+5,  km: 5.4,  t: "selv", z: "", ind: false, d: "", dup: true },
+    { name: "Sofie Rask",                  min: 12*60+30, km: 5.4,  t: "selv", z: "1", ind: true, d: "", dup: true }
+  ];
+
+  function el(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]; }); }
+  function hm(min) { return Math.floor(min / 60) + ":" + String(min % 60).padStart(2, "0"); }
+  function km(n) { return n.toLocaleString("da-DK", { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+  function toast(m) { var t = el("toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toast.h); toast.h = setTimeout(function () { t.classList.remove("show"); }, 2600); }
+
+  // Samme regler som i løsningsforslaget: kører selv åbner zoner og individuel beregning
+  function status(l) {
+    var selv = l.t === "selv", d = Number(l.d);
+    if (l.noRate) return ["Mangler sats", "bad"];
+    if (!l.t) return ["Mangler transport", "warn"];
+    if (selv && !l.z) return ["Mangler zone", "bad"];
+    if (selv && l.ind && !(Number.isInteger(d) && d >= 1 && d <= 31)) return ["Mangler dage", "bad"];
+    return ["Klar", "ok"];
+  }
+
+  function render() {
+    var klar = 0;
+    el("rows").innerHTML = '<div class="row head-row"><span>Borger</span><span>Transport</span><span>Zoner</span><span>Individuel beregning</span><span>Status</span></div>' +
+      lines.map(function (l, i) {
+        var selv = l.t === "selv", s = status(l);
+        if (s[1] === "ok") klar++;
+        return '<div class="row"><div><p class="nm">' + esc(l.name) + '</p><p class="mu">' + hm(l.min) + ' timer · ' + km(l.km) + ' km' +
+          (l.dup ? " · navn flere gange i filen" : "") + (l.noRate ? ' · <a data-rate="' + i + '">angiv sats</a>' : "") + '</p></div>' +
+          '<select data-f="t" data-i="' + i + '" aria-label="Transport for ' + esc(l.name) + '"><option value=""' + (l.t ? "" : " selected") + '>Vælg</option>' +
+          Object.keys(TRANSPORT).map(function (k) { return '<option value="' + k + '"' + (l.t === k ? " selected" : "") + '>' + TRANSPORT[k] + '</option>'; }).join("") + '</select>' +
+          '<select data-f="z" data-i="' + i + '"' + (selv ? "" : " disabled") + ' aria-label="Zoner for ' + esc(l.name) + '"><option value="">-</option>' +
+          ZONES.map(function (z) { return '<option value="' + z + '"' + (String(z) === l.z ? " selected" : "") + '>' + z + '</option>'; }).join("") + '</select>' +
+          '<div class="ind"><input type="checkbox" data-f="ind" data-i="' + i + '"' + (selv ? "" : " disabled") + (l.ind ? " checked" : "") + ' aria-label="Individuel beregning for ' + esc(l.name) + '">' +
+          '<input type="number" min="1" max="31" placeholder="Dage" data-f="d" data-i="' + i + '"' + (selv && l.ind ? "" : " disabled") + ' value="' + esc(l.d) + '" aria-label="Fremmødedage for ' + esc(l.name) + '"></div>' +
+          '<span><span class="badge ' + s[1] + '">' + s[0] + '</span></span></div>';
+      }).join("");
+    el("cnt").textContent = klar + " af " + lines.length + " klar";
+  }
+
+  // Ændring af et felt opdaterer data og tegner kun den række der ændrede sig, så fokus ikke mistes
+  document.addEventListener("change", function (e) {
+    var t = e.target, f = t.dataset.f; if (!f) return;
+    var l = lines[+t.dataset.i];
+    if (f === "t") { l.t = t.value; if (l.t !== "selv") { l.z = ""; l.ind = false; l.d = ""; } }
+    else if (f === "z") l.z = t.value;
+    else if (f === "ind") { l.ind = t.checked; if (!l.ind) l.d = ""; }
+    else if (f === "d") l.d = t.value;
+    el("msg").textContent = ""; el("msg").className = "msg";
+    render();
+  });
+
+  document.addEventListener("click", function (e) {
+    var t = e.target;
+    if (t.dataset.rate !== undefined) {
+      lines[+t.dataset.rate].noRate = false; render();
+      toast("Skitse: her åbnes borgerens kort, hvor satsen angives. Satsen er nu sat.");
+    }
+    else if (t.id === "back") toast("Skitse: her går brugeren tilbage til Gennemse transport.");
+    else if (t.id === "draft") toast("Skitse: kladden er gemt. Intet er beregnet endnu.");
+    else if (t.id === "calc") {
+      var mangler = lines.filter(function (l) { return status(l)[1] !== "ok"; }).length;
+      if (mangler) {
+        el("msg").className = "msg bad";
+        el("msg").textContent = mangler + (mangler === 1 ? " borger mangler" : " borgere mangler") + " oplysninger, før du kan beregne";
+      } else toast("Skitse: her beregnes kørslen, og brugeren går videre til Godkend.");
+    }
+  });
+
+  render();
+</script>
+</body>
+</html>

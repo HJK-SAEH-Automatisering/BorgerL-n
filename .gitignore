@@ -216,3 +216,18 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# BorgerLøn: genererede PDF-rapporter og lokale eksempelfiler
+media/
+eksempel/
+
+# Kontrakten (AGENTS.md): det personlige, det hemmelige og det genskabelige
+.claude/settings.local.json
+.vscode/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+.venv/

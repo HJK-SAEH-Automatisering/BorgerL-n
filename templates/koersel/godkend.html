@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Godkend{% endblock %}
+{% block stepper %}{% include "koersel/_stepper.html" %}{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>Godkend beregning · {{ koersel.navn }}</h1>
+  <span class="sub">Rapport {{ beregning.rapport_id }} · {{ beregning.tidspunkt|date:"d.m.Y H:i" }} · {{ godkendt_antal }} af {{ resultater|length }} godkendt</span>
+</div>
+<p class="sub">Gennemgå, hvordan beløbet er beregnet for hver borger. Intet kan eksporteres, før alle borgere er godkendt.</p>
+
+<div class="tiles">
+  <div class="tile"><div class="l">Borgere</div><div class="v">{{ totaler.antal }}</div></div>
+  <div class="tile"><div class="l">Løn før skat</div><div class="v">{{ totaler.loen_foer|floatformat:"2g" }} kr</div></div>
+  <div class="tile"><div class="l">Løn efter skat</div><div class="v">{{ totaler.loen_efter|floatformat:"2g" }} kr</div></div>
+  <div class="tile"><div class="l">Træk (lønart 991)</div><div class="v">{{ totaler.traek_991|floatformat:"2g" }} kr</div></div>
+  <div class="tile"><div class="l">Udbetaling (lønart 991)</div><div class="v">{{ totaler.udbetaling_991|floatformat:"2g" }} kr</div></div>
+</div>
+
+<div class="actions" style="margin-top:0">
+  <a class="btn" href="{% url 'rapport' beregning.pk %}" target="_blank" rel="noopener">Åbn PDF-rapport {{ beregning.rapport_id }}</a>
+  {% if koersel.status != 'godkendt' %}
+  <form method="post">{% csrf_token %}<input type="hidden" name="handling" value="godkend_alle"><button class="primary" type="submit">Godkend alle</button></form>
+  {% else %}
+  <span class="badge ok">Godkendt</span>
+  <form method="post">{% csrf_token %}<input type="hidden" name="handling" value="genaabn"><button type="submit">Genåbn til rettelser</button></form>
+  {% endif %}
+  {% if kan_eksportere %}
+  <a class="btn" href="{% url 'eksport' koersel.pk %}">Eksportér lønudtræk (CSV)</a>
+  {% else %}
+  <span class="mu">Eksport er låst, til alle borgere er godkendt.</span>
+  {% endif %}
+  <a class="btn" href="{% url 'undtagelser' koersel.pk %}">Tilbage til undtagelser</a>
+</div>
+
+<h2>Beregning pr. borger</h2>
+<div class="rows">
+  {% for r in resultater %}
+  <div style="border-bottom:0.5px solid var(--border)">
+    <div class="row g4" style="border-bottom:none">
+      <div>
+        <p class="nm">{{ r.navn }}{% if r.tj_nr %} <span class="mu">Tj.nr. {{ r.tj_nr }}</span>{% endif %}</p>
+        <p class="mu">{{ r.afdeling }} · {{ r.timer_tekst }} timer · {{ r.transport_navn }}{% if r.detaljer_data.input.zoner %} · {{ r.detaljer_data.input.zoner }} zoner{% endif %}</p>
+      </div>
+      <span class="right nowrap"><span class="mu">Løn før skat</span><br>{{ r.loen_foer|floatformat:"2g" }} kr</span>
+      <span class="right nowrap"><span class="mu">Træk 991</span><br>{{ r.traek_991|floatformat:"2g" }} kr</span>
+      <span class="right nowrap"><span class="mu">Udbetaling 991</span><br><strong>{{ r.udbetaling_991|floatformat:"2g" }} kr</strong></span>
+      <span>{% if r.godkendt %}<span class="badge ok" title="{{ r.godkendt_af }} {{ r.godkendt_tidspunkt|date:'d.m.Y H:i' }}">Godkendt</span>{% else %}<span class="badge warn">Afventer</span>{% endif %}</span>
+      <span>
+        {% if not r.godkendt and koersel.status != 'godkendt' %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="resultat" value="{{ r.pk }}"><input type="hidden" name="handling" value="godkend"><button type="submit">Godkend</button></form>
+        {% endif %}
+      </span>
+    </div>
+    {% for a in r.detaljer_data.advarsler %}<div style="padding:0 14px 8px"><span class="badge warn">{{ a }}</span></div>{% endfor %}
+    <details>
+      <summary>Se beregningsgrundlag</summary>
+      <table class="t" style="margin-top:8px">
+        <thead><tr><th>Nr.</th><th>Trin</th><th>Formel</th><th>Indsat</th><th class="r">Resultat</th></tr></thead>
+        <tbody>
+          {% for t in r.detaljer_data.grundlag %}
+          <tr><td>{{ t.nr }}</td><td>{{ t.titel }}</td><td>{{ t.formel }}</td><td>{{ t.indsat }}</td><td class="r nowrap">{{ t.resultat }}</td></tr>
+          {% if t.note %}<tr><td></td><td colspan="4" class="mu"><em>{{ t.note }}</em></td></tr>{% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  </div>
+  {% endfor %}
+</div>
+
+<h2>Tidligere beregninger for måneden</h2>
+<div class="rows">
+  {% for b in historik %}
+  <div class="row" style="grid-template-columns: 1fr 1fr 160px">
+    <span>{{ b.rapport_id }}{% if forloop.first %} <span class="badge info">Gældende</span>{% endif %}</span>
+    <span class="mu">{{ b.tidspunkt|date:"d.m.Y H:i" }} · {% if b.bruger %}{{ b.bruger.get_username }}{% endif %}</span>
+    <a class="btn" href="{% url 'rapport' b.pk %}" target="_blank" rel="noopener">Åbn PDF</a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

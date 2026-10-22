@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKITSE — Gennemse transport</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #fff; --text: #1d2330; --mu: #667085; --border: #e1e4ea;
+    --primary: #1f5fbf; --primary-d: #184c99;
+    --ok-bg: #e4f4e8; --ok: #17692c; --warn-bg: #fdf0d5; --warn: #8a5a00;
+    --err-bg: #fde4e4; --err: #a11a1a; --info-bg: #e3edfb; --info: #1f4f99;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--text); }
+  .sketch-band { position: sticky; top: 0; z-index: 50; background: #1d2330; color: #ffd84d; text-align: center;
+    font-weight: 700; letter-spacing: .12em; padding: 6px 10px; font-size: 13px; border-bottom: 3px solid #ffd84d; }
+  header.app { background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 24px; display: flex; align-items: center; gap: 24px; }
+  header.app .logo { font-weight: 700; }
+  header.app nav { display: flex; gap: 16px; color: var(--mu); }
+  header.app .user { margin-left: auto; color: var(--mu); font-size: 13px; }
+  main { max-width: 900px; margin: 0 auto; padding: 18px 24px 60px; }
+
+  .stepper { display: flex; gap: 8px; margin-bottom: 18px; }
+  .step { flex: 1; padding: 8px 12px; border-radius: 8px; background: var(--card); border: 1px solid var(--border); color: var(--mu); font-size: 13px; display: flex; gap: 8px; align-items: center; }
+  .step b { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--border); color: var(--text); font-size: 12px; }
+  .step.done b { background: var(--ok); color: #fff; }
+  .step.on { border-color: var(--primary); color: var(--text); font-weight: 600; }
+  .step.on b { background: var(--primary); color: #fff; }
+
+  .head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0; }
+  .sub, .mu { color: var(--mu); }
+  .sub { font-size: 14px; }
+
+  .alertbox { margin: 12px 0; padding: 12px 14px; border: 1px solid #ecd49a; background: var(--warn-bg); border-radius: 9px; }
+  .alertbox p { margin: 0 0 8px; color: #5f3f00; }
+  .alertbox .f { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  select, input[type=number] { font: inherit; padding: 5px 8px; border: 1px solid #c9ced8; border-radius: 6px; background: #fff; }
+  button, .btn { font: inherit; padding: 7px 14px; border: 1px solid var(--border); background: var(--card); border-radius: 7px; cursor: pointer; color: var(--text); }
+  button:hover { background: #eef0f4; }
+  button.primary { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
+  button.primary:hover { background: var(--primary-d); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+
+  .rows { margin-top: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: minmax(240px, 2fr) 1fr 1.2fr; gap: 12px; align-items: center; padding: 9px 14px; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: none; }
+  .row.head-row { background: #f0f2f6; color: var(--mu); font-size: 13px; font-weight: 600; }
+  .row.unres { background: #fffaf0; }
+  .nm { margin: 0; font-weight: 600; }
+  .row p.mu { margin: 0; font-size: 13px; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }
+  .badge.ok { background: var(--ok-bg); color: var(--ok); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.info { background: var(--info-bg); color: var(--info); }
+  .edit-banner { margin-top: 12px; padding: 8px 12px; background: var(--info-bg); color: var(--info); border-radius: 8px; font-size: 14px; display: none; }
+  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 16px 0; }
+  .actions .hint { color: var(--warn); font-size: 14px; }
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: #1d2330; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 80vw; text-align: center; }
+  .toast.show { opacity: 1; }
+  @media (max-width: 700px) { .row { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<div class="sketch-band">SKITSE — fiktive data</div>
+
+<header class="app">
+  <span class="logo">BorgerLøn</span>
+  <nav><span>Kørsler</span><span>Borgere</span><span>Stamdata</span><span>Audit</span></nav>
+  <span class="user">Administrativ medarbejder</span>
+</header>
+
+<main>
+  <div class="stepper">
+    <div class="step done"><b>✓</b> Upload</div>
+    <div class="step on"><b>2</b> Gennemse transport</div>
+    <div class="step"><b>3</b> Undtagelser</div>
+    <div class="step"><b>4</b> Godkend</div>
+  </div>
+
+  <div class="head">
+    <h1>Gennemse borgernes transport · september 2026</h1>
+    <span class="sub" id="meta"></span>
+  </div>
+  <p class="sub">Sådan er transport og afstand registreret for borgerne i filen. Vil du ændre noget? Ændringer her gemmes i borgerregisteret.</p>
+
+  <div id="alerts"></div>
+  <div class="edit-banner" id="editBanner">Du retter oplysninger. Ændringerne gemmes i borgerregisteret, når du trykker "Gem og fortsæt".</div>
+
+  <div class="rows" id="rows"></div>
+
+  <div class="actions" id="actions"></div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ---- Fiktive data (ingen rigtige personer, ingen personnumre) ----
+  var TRANSPORT = { taxa: "Taxa", selv: "Kører selv", ingen: "Ingen udgift" };
+
+  // Registret (kun de borgere, der kan vælges til uafklarede rækker)
+  var registry = {
+    pia1: { name: "Pia Hammershøj", tj: "T-2011", km: 4.8, transport: "taxa" },
+    pia2: { name: "Pia Hammershøj", tj: "T-2087", km: 12.4, transport: "selv" },
+    nik:  { name: "Nikolaj Brix Lauridsen", tj: "T-2043", km: 9.1, transport: "taxa" },
+    git:  { name: "Gitte Marie Rønnow", tj: "T-2056", km: 15.7, transport: "" }
+  };
+
+  var lines = [
+    { file: "Karen Vestergaard Mikkelsen", min: 82*60+30, b: { name: "Karen Vestergaard Mikkelsen", km: 8.2, transport: "taxa" } },
+    { file: "Jens Ove Thorsager",          min: 61*60+15, b: { name: "Jens Ove Thorsager", km: 3.5, transport: "selv" } },
+    { file: "Pia Hammershøj",              min: 58*60+20, b: null, status: "flertydig", options: ["pia1", "pia2"] },
+    { file: "Mette Lundgaard",             min: 44*60+20, b: { name: "Mette Lundgaard", km: 13.2, transport: "selv" } },
+    { file: "Brian Sandholt Kjeldsen",     min: 96*60+45, b: { name: "Brian Sandholt Kjeldsen", km: 0.8, transport: "ingen" } },
+    { file: "Fatima Al-Rashid",            min: 70*60,    b: { name: "Fatima Al-Rashid", km: 17.9, transport: "taxa" } },
+    { file: "Nikolaj Brix-Lauridsen",      min: 63*60+45, b: null, status: "ingen", options: ["nik", "git"] },
+    { file: "Anne-Mette Sofie Kristensen-Brandt Holm Nielsen", min: 38*60+10, b: { name: "Anne-Mette Sofie Kristensen-Brandt Holm Nielsen", km: 6.0, transport: "taxa" } },
+    { file: "Ole Brøndum",                 min: 55*60+40, b: { name: "Ole Brøndum", km: 11.3, transport: "" } },
+    { file: "Gitte M. Rønnow",             min: 31*60+10, b: null, status: "ingen", options: ["git", "nik"] },
+    { file: "Sofie Rask",                  min: 88*60+5,  b: { name: "Sofie Rask", km: 5.4, transport: "selv" }, dup: true },
+    { file: "Sofie Rask",                  min: 12*60+30, b: { name: "Sofie Rask", km: 5.4, transport: "selv" }, dup: true }
+  ];
+  var total = 47; // rækker i filen; skitsen viser et udsnit
+  var editing = false;
+
+  function el(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]; }); }
+  function hm(min) { return Math.floor(min / 60) + ":" + String(min % 60).padStart(2, "0"); }
+  function km(n) { return n.toLocaleString("da-DK", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " km"; }
+  function toast(m) { var t = el("toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toast.h); toast.h = setTimeout(function () { t.classList.remove("show"); }, 2600); }
+  function unresolved() { return lines.filter(function (l) { return !l.b; }); }
+
+  function render() {
+    var un = unresolved();
+    el("meta").textContent = "punchly-sep-2026-ny.xlsx · " + total + " rækker (skitsen viser " + lines.length + ")";
+
+    el("alerts").innerHTML = un.map(function (l) {
+      var i = lines.indexOf(l);
+      var msg = l.status === "flertydig" ? "matcher flere borgere i registret" : "kunne ikke matches på navn";
+      return '<div class="alertbox"><p><strong>' + esc(l.file) + '</strong> (' + hm(l.min) + ' timer) ' + msg + '.</p>' +
+        '<div class="f"><select id="pick' + i + '" style="min-width:260px" aria-label="Vælg borger til ' + esc(l.file) + '">' +
+        '<option value="">Vælg borger i registret</option>' +
+        l.options.map(function (k) { return '<option value="' + k + '">' + esc(registry[k].name) + ' (Tj.nr. ' + registry[k].tj + ')</option>'; }).join("") +
+        '</select><button data-confirm="' + i + '">Bekræft match</button>' +
+        '<button data-new="' + i + '">Opret ny borger</button></div></div>';
+    }).join("");
+
+    el("editBanner").style.display = editing ? "block" : "none";
+
+    var html = '<div class="row head-row"><span>Borger</span><span>Afstand</span><span>Transport</span></div>';
+    lines.forEach(function (l, i) {
+      var b = l.b;
+      html += '<div class="row' + (b ? "" : " unres") + '"><div><p class="nm">' + esc(b ? b.name : l.file) + '</p>' +
+        '<p class="mu">' + hm(l.min) + ' timer' + (l.dup ? " · navnet forekommer flere gange i filen" : "") + '</p></div>';
+      if (!b) {
+        html += '<span class="mu">-</span><span><span class="badge warn">Ikke afklaret</span></span>';
+      } else if (editing) {
+        html += '<span><input type="number" step="0.1" min="0" style="width:100px" data-km="' + i + '" value="' + b.km + '" aria-label="Afstand i km"> km</span>' +
+          '<select data-tr="' + i + '" aria-label="Transport">' +
+          (b.transport ? "" : '<option value="" selected disabled>Vælg</option>') +
+          Object.keys(TRANSPORT).map(function (k) { return '<option value="' + k + '"' + (b.transport === k ? " selected" : "") + '>' + TRANSPORT[k] + '</option>'; }).join("") +
+          '</select>';
+      } else {
+        html += '<span>' + km(b.km) + '</span><span>' +
+          (b.transport ? TRANSPORT[b.transport] : '<span class="badge warn">Ikke angivet</span>') + '</span>';
+      }
+      html += '</div>';
+    });
+    el("rows").innerHTML = html;
+
+    var missing = lines.filter(function (l) { return l.b && !l.b.transport; }).length;
+    var a = '<button id="back">Tilbage</button>';
+    if (editing) {
+      a += '<button id="cancel">Annuller</button><button class="primary" id="save">Gem og fortsæt</button>';
+    } else {
+      a += '<button id="edit">Ja, ret oplysninger</button><button class="primary" id="go"' + (un.length ? " disabled" : "") + '>Nej, fortsæt</button>';
+      if (un.length) a += '<span class="hint">Afklar ' + un.length + ' række' + (un.length > 1 ? "r" : "") + ' ovenfor, før du kan fortsætte.</span>';
+      else if (missing) a += '<span class="hint">' + missing + ' borger har ikke angivet transport — det rettes i næste trin.</span>';
+    }
+    el("actions").innerHTML = a;
+  }
+
+  document.addEventListener("click", function (e) {
+    var t = e.target, d = t.dataset;
+    if (d.confirm !== undefined) {
+      var i = +d.confirm, key = el("pick" + i).value;
+      if (!key) { toast("Vælg en borger først."); return; }
+      var r = registry[key];
+      lines[i].b = { name: r.name, km: r.km, transport: r.transport };
+      render(); toast("Match bekræftet: " + r.name + ".");
+    }
+    else if (d.new !== undefined) toast("Skitse: her åbnes formularen til at oprette en ny borger, med navnet udfyldt.");
+    else if (t.id === "edit") { editing = true; render(); }
+    else if (t.id === "cancel") { editing = false; render(); }
+    else if (t.id === "save") {
+      document.querySelectorAll("[data-km]").forEach(function (inp) { lines[+inp.dataset.km].b.km = parseFloat(inp.value) || 0; });
+      document.querySelectorAll("[data-tr]").forEach(function (sel) { lines[+sel.dataset.tr].b.transport = sel.value; });
+      editing = false; render(); toast("Skitse: ændringerne er gemt i borgerregisteret. Her går brugeren videre til Undtagelser.");
+    }
+    else if (t.id === "go") toast("Skitse: her går brugeren videre til Undtagelser.");
+    else if (t.id === "back") toast("Skitse: her går brugeren tilbage til Upload.");
+  });
+
+  render();
+</script>
+</body>
+</html>

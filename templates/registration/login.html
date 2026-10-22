@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Log ind{% endblock %}
+{% block wrapclass %}smal{% endblock %}
+{% block content %}
+<h1>Log ind</h1>
+<p class="sub">Kun administrative medarbejdere har adgang.</p>
+<form method="post" class="card pad">
+  {% csrf_token %}
+  {% if form.errors %}<p class="msg bad">Forkert brugernavn eller adgangskode.</p>{% endif %}
+  <div class="field"><label for="id_username">Brugernavn</label>{{ form.username }}</div>
+  <div class="field"><label for="id_password">Adgangskode</label>{{ form.password }}</div>
+  <input type="hidden" name="next" value="{{ next }}">
+  <button class="primary" type="submit">Log ind</button>
+</form>
+{% endblock %}

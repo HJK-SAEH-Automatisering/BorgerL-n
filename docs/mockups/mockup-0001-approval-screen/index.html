@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKITSE — Godkend beregning</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #fff; --text: #1d2330; --mu: #667085; --border: #e1e4ea;
+    --primary: #1f5fbf; --primary-d: #184c99;
+    --ok-bg: #e4f4e8; --ok: #17692c; --warn-bg: #fdf0d5; --warn: #8a5a00;
+    --err-bg: #fde4e4; --err: #a11a1a; --info-bg: #e3edfb; --info: #1f4f99;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--text); }
+  .sketch-band { position: sticky; top: 0; z-index: 50; background: #1d2330; color: #ffd84d; text-align: center;
+    font-weight: 700; letter-spacing: .12em; padding: 6px 10px; font-size: 13px; border-bottom: 3px solid #ffd84d; }
+  header.app { background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 24px; display: flex; align-items: center; gap: 24px; }
+  header.app .logo { font-weight: 700; }
+  header.app nav { display: flex; gap: 16px; color: var(--mu); }
+  header.app nav span.on { color: var(--text); font-weight: 600; }
+  header.app .user { margin-left: auto; color: var(--mu); font-size: 13px; }
+  main { max-width: 1120px; margin: 0 auto; padding: 18px 24px 60px; }
+
+  .stepper { display: flex; gap: 8px; margin-bottom: 18px; }
+  .step { flex: 1; padding: 8px 12px; border-radius: 8px; background: var(--card); border: 1px solid var(--border); color: var(--mu); font-size: 13px; display: flex; gap: 8px; align-items: center; }
+  .step b { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--border); color: var(--text); font-size: 12px; }
+  .step.done b { background: var(--ok); color: #fff; }
+  .step.on { border-color: var(--primary); color: var(--text); font-weight: 600; }
+  .step.on b { background: var(--primary); color: #fff; }
+
+  .head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0; }
+  h2 { font-size: 17px; margin: 28px 0 10px; }
+  .sub, .mu { color: var(--mu); }
+  .sub { font-size: 14px; }
+  .tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 14px 0; }
+  .tile { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .tile .l { font-size: 12px; color: var(--mu); }
+  .tile .v { font-size: 19px; font-weight: 650; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 12px 0 6px; }
+  button, .btn { font: inherit; padding: 7px 14px; border: 1px solid var(--border); background: var(--card); border-radius: 7px; cursor: pointer; color: var(--text); }
+  button:hover { background: #eef0f4; }
+  button.primary { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
+  button.primary:hover { background: var(--primary-d); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }
+  .badge.ok { background: var(--ok-bg); color: var(--ok); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.err { background: var(--err-bg); color: var(--err); }
+  .badge.info { background: var(--info-bg); color: var(--info); }
+
+  .filters { display: flex; gap: 6px; margin: 10px 0; }
+  .filters button { border-radius: 999px; padding: 4px 12px; font-size: 13.5px; }
+  .filters button.on { background: var(--text); color: #fff; border-color: var(--text); }
+
+  .rows { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .item { border-bottom: 1px solid var(--border); }
+  .item:last-child { border-bottom: none; }
+  .item.blocked { background: #fff8f8; }
+  .row { display: grid; grid-template-columns: minmax(220px, 2.2fr) repeat(3, 1fr) 110px 90px; gap: 12px; align-items: center; padding: 10px 14px; }
+  .nm { margin: 0; font-weight: 600; }
+  .row p.mu { margin: 0; font-size: 13px; }
+  .right { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 14px; }
+  .right .mu { font-size: 12px; }
+  .flags { padding: 0 14px 8px; display: flex; flex-direction: column; gap: 5px; }
+  .flag { font-size: 13.5px; padding: 6px 10px; border-radius: 6px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .flag.warn { background: var(--warn-bg); color: var(--warn); }
+  .flag.err { background: var(--err-bg); color: var(--err); }
+  .flag select, .flag input { font: inherit; padding: 3px 6px; border: 1px solid var(--border); border-radius: 5px; }
+  .flag button { padding: 3px 10px; font-size: 13px; }
+  details { padding: 0 14px 10px; }
+  summary { cursor: pointer; color: var(--primary); font-size: 13.5px; }
+  table.t { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13.5px; }
+  table.t th { text-align: left; color: var(--mu); font-weight: 600; border-bottom: 1px solid var(--border); padding: 5px 8px; }
+  table.t td { padding: 5px 8px; border-bottom: 1px solid #f0f1f4; }
+  table.t th.r, table.t td.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.t td.note { color: var(--mu); font-style: italic; }
+
+  .hist { display: grid; grid-template-columns: 1fr 1.4fr 140px; gap: 12px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .hist:last-child { border-bottom: none; }
+  .confirm { background: var(--warn-bg); color: var(--warn); border: 1px solid #ecd49a; border-radius: 8px; padding: 10px 14px; margin: 8px 0; display: none; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: #1d2330; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 80vw; text-align: center; }
+  .toast.show { opacity: 1; }
+  @media (max-width: 860px) { .tiles { grid-template-columns: repeat(2, 1fr); } .row { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<div class="sketch-band">SKITSE — fiktive data</div>
+
+<header class="app">
+  <span class="logo">BorgerLøn</span>
+  <nav><span>Kørsler</span><span>Borgere</span><span>Stamdata</span><span>Audit</span></nav>
+  <span class="user">Administrativ medarbejder</span>
+</header>
+
+<main>
+  <div class="stepper">
+    <div class="step done"><b>✓</b> Upload</div>
+    <div class="step done"><b>✓</b> Gennemse transport</div>
+    <div class="step done"><b>✓</b> Undtagelser</div>
+    <div class="step on"><b>4</b> Godkend</div>
+  </div>
+
+  <div class="head">
+    <h1>Godkend beregning · september 2026</h1>
+    <span class="sub" id="meta"></span>
+    <span id="statusBadge"></span>
+  </div>
+  <p class="sub">Gennemgå, hvordan beløbet er beregnet for hver borger. Intet kan eksporteres, før alle borgere er godkendt.</p>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="actions">
+    <button id="pdfBtn">Åbn PDF-rapport</button>
+    <button class="primary" id="approveAll">Godkend alle</button>
+    <button id="reopen" style="display:none">Genåbn til rettelser</button>
+    <button id="exportBtn">Eksportér lønudtræk (CSV)</button>
+    <button id="recalcBtn">Beregn igen</button>
+    <span class="mu" id="exportNote"></span>
+  </div>
+  <div class="confirm" id="recalcConfirm">
+    <span><strong>Beregn igen?</strong> Der oprettes en ny rapport, og alle godkendelser bortfalder.</span>
+    <button class="primary" id="recalcYes">Ja, beregn igen</button>
+    <button id="recalcNo">Annullér</button>
+  </div>
+
+  <div class="filters" id="filters"></div>
+
+  <div class="rows" id="rows"></div>
+
+  <h2>Tidligere beregninger for måneden</h2>
+  <div class="rows" id="hist"></div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ---- Fiktive data (ingen rigtige personer, ingen personnumre) ----
+  var RATE = 20;            // kr pr. time, før skat (fiktiv)
+  var TAX = 0.40;           // skatteprocent (fiktiv)
+  var MAX_SHARE = 0.30;     // højst 30 % af løn efter skat
+  var ZONE_PRICE = { 1: 12, 2: 14, 3: 17, 4: 21, 5: 25, 6: 29 }; // pr. enkeltrejse (fiktive)
+
+  var citizens = [
+    { name: "Karen Vestergaard Mikkelsen", tj: "T-1017", dept: "Værksted", min: 82*60+30, transport: "taxa", zones: 3, days: 17, individual: false, warns: [] },
+    { name: "Jens Ove Thorsager", tj: "T-1023", dept: "Køkken", min: 61*60+15, transport: "selv", zones: 2, days: 14, individual: false, warns: [] },
+    { name: "Mette Lundgaard", tj: "T-1031", dept: "Gartneri", min: 44*60+20, transport: "selv", zones: 3, days: 4, individual: true, warns: [] },
+    { name: "Brian Sandholt Kjeldsen", tj: "T-1038", dept: "Værksted", min: 96*60+45, transport: "ingen", zones: null, days: 0, individual: false, warns: [] },
+    { name: "Fatima Al-Rashid", tj: "T-1044", dept: "Pakkeri", min: 70*60, transport: "taxa", zones: 5, days: 18, individual: false,
+      warns: ["Dobbeltansættelse: står også med timer i Køkken denne måned — kontrollér, at der ikke udbetales dobbelt."] },
+    { name: "Anne-Mette Sofie Kristensen-Brandt Holm Nielsen", tj: "T-1052", dept: "", min: 38*60+10, transport: "taxa", zones: 2, days: 12, individual: false,
+      warns: ["Afdeling mangler: lønsedlen kan ikke rutes til en modtager."] },
+    { name: "Ole Brøndum", tj: "T-1060", dept: "Køkken", min: 55*60+40, transport: "selv", zones: null, days: 13, individual: false, warns: [] },
+    { name: "Sofie Rask", tj: "T-1066", dept: "Pakkeri", min: 88*60+5, transport: "selv", zones: 4, days: 19, individual: false, warns: [] }
+  ];
+  citizens.forEach(function (c) { c.approved = false; });
+
+  var reportNo = 2;
+  var history = [
+    { id: "2026-09-001", when: "03.10.2026 08:41", user: "admin-demo" },
+    { id: "2026-09-002", when: "03.10.2026 09:12", user: "admin-demo" }
+  ];
+  var filter = "alle";
+
+  // ---- Beregning ----
+  function r2(n) { return Math.round(n * 100) / 100; }
+  function kr(n) { return n.toLocaleString("da-DK", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " kr"; }
+  function hm(min) { return Math.floor(min / 60) + ":" + String(min % 60).padStart(2, "0"); }
+  function transportName(c) {
+    return { taxa: "Taxa", selv: c.individual ? "Kører selv (individuel)" : "Kører selv", ingen: "Ingen udgift" }[c.transport];
+  }
+  function blockers(c) {
+    var b = [];
+    if (c.transport !== "ingen" && !c.zones) b.push("Zone mangler — beregningen kan ikke godkendes, før der er valgt zone.");
+    return b;
+  }
+  function calc(c) {
+    var hours = c.min / 60;
+    var before = r2(hours * RATE);
+    var after = r2(before * (1 - TAX));
+    var steps = [];
+    steps.push({ t: "Løn før skat (lønart 110)", f: "timer × timesats", i: hm(c.min) + " t × " + RATE + " kr", r: kr(before) });
+    steps.push({ t: "Løn efter skat", f: "løn før skat × (1 − skat)", i: kr(before) + " × " + (1 - TAX).toFixed(2), r: kr(after) });
+    var out = { before: before, after: after, deduction: 0, payout: 0, steps: steps, ok: true };
+    if (c.transport === "ingen") {
+      steps.push({ t: "Transport", f: "ingen udgift", i: "—", r: kr(0), note: "Ingen kørsel at beregne." });
+      return out;
+    }
+    if (!c.zones) { out.ok = false; return out; }
+    var ownZones = Math.min(c.zones, 2);
+    var ownBase = r2(ZONE_PRICE[ownZones] * 2 * c.days);
+    var cap = r2(after * MAX_SHARE);
+    var own = Math.min(ownBase, cap);
+    steps.push({ t: "Egenbetaling før loft", f: "zonepris (maks. 2 zoner) × 2 × dage", i: ZONE_PRICE[ownZones] + " × 2 × " + c.days + " d", r: kr(ownBase) });
+    steps.push({ t: "Loft for egenbetaling", f: "30 % af løn efter skat", i: "30 % × " + kr(after), r: kr(cap) });
+    steps.push({ t: "Egenbetaling", f: "mindste af de to", i: kr(ownBase) + " / " + kr(cap), r: kr(own),
+      note: ownBase > cap ? "Loftet slår til: borgeren betaler højst 30 % af løn efter skat." : "" });
+    if (c.transport === "taxa") {
+      out.deduction = own;
+      steps.push({ t: "Træk (lønart 991)", f: "egenbetaling", i: kr(own), r: kr(own), note: "Kommunen betaler taxaen; borgerens egenbetaling trækkes i lønnen." });
+    } else {
+      var gross = r2(ZONE_PRICE[c.zones] * 2 * c.days);
+      var pay = Math.max(0, r2(gross - own));
+      out.payout = pay;
+      steps.push({ t: c.individual ? "Zonepris, individuel beregning" : "Zonepris, standard", f: "zonepris × 2 × " + (c.individual ? "fremmødedage" : "dage"),
+        i: ZONE_PRICE[c.zones] + " × 2 × " + c.days + " d", r: kr(gross) });
+      steps.push({ t: "Udbetaling (lønart 991)", f: "zonepris − egenbetaling", i: kr(gross) + " − " + kr(own), r: kr(pay) });
+    }
+    return out;
+  }
+
+  // ---- Visning ----
+  function el(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]; }); }
+  function toast(msg) {
+    var t = el("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast.h); toast.h = setTimeout(function () { t.classList.remove("show"); }, 2600);
+  }
+  function allApproved() { return citizens.every(function (c) { return c.approved; }); }
+
+  function render() {
+    var res = citizens.map(function (c) { return { c: c, r: calc(c), b: blockers(c) }; });
+    var done = citizens.filter(function (c) { return c.approved; }).length;
+    var sum = function (k) { return res.reduce(function (a, x) { return a + (x.r.ok ? x.r[k] : 0); }, 0); };
+    var rid = "2026-09-" + String(reportNo).padStart(3, "0");
+    var approved = allApproved();
+
+    el("meta").textContent = "Rapport " + rid + " · " + done + " af " + citizens.length + " godkendt";
+    el("statusBadge").innerHTML = approved ? '<span class="badge ok">Godkendt</span>' : '<span class="badge warn">Afventer godkendelse</span>';
+    el("pdfBtn").textContent = "Åbn PDF-rapport " + rid;
+
+    el("tiles").innerHTML = [
+      ["Borgere", citizens.length],
+      ["Løn før skat", kr(sum("before"))],
+      ["Løn efter skat", kr(sum("after"))],
+      ["Træk (lønart 991)", kr(sum("deduction"))],
+      ["Udbetaling (lønart 991)", kr(sum("payout"))]
+    ].map(function (t) { return '<div class="tile"><div class="l">' + t[0] + '</div><div class="v">' + t[1] + '</div></div>'; }).join("");
+
+    var blockedN = res.filter(function (x) { return x.b.length; }).length;
+    var warnN = res.filter(function (x) { return x.c.warns.length; }).length;
+    var pendingN = citizens.length - done;
+    var defs = [["alle", "Alle (" + citizens.length + ")"], ["afventer", "Afventer (" + pendingN + ")"],
+      ["advarsler", "Advarsler (" + warnN + ")"], ["blokeret", "Kan ikke godkendes (" + blockedN + ")"]];
+    el("filters").innerHTML = defs.map(function (d) {
+      return '<button data-f="' + d[0] + '" class="' + (filter === d[0] ? "on" : "") + '">' + d[1] + '</button>';
+    }).join("");
+
+    el("approveAll").style.display = approved ? "none" : "";
+    el("reopen").style.display = approved ? "" : "none";
+    el("exportBtn").disabled = !approved;
+    el("exportNote").textContent = approved ? "" : "Eksport er låst, til alle borgere er godkendt.";
+
+    var shown = res.filter(function (x) {
+      if (filter === "afventer") return !x.c.approved;
+      if (filter === "advarsler") return x.c.warns.length > 0;
+      if (filter === "blokeret") return x.b.length > 0;
+      return true;
+    });
+    el("rows").innerHTML = shown.length ? shown.map(function (x) {
+      var c = x.c, r = x.r, i = citizens.indexOf(c);
+      var zoneTxt = c.transport !== "ingen" && c.zones ? " · " + c.zones + " zoner" : "";
+      var badge = c.approved ? '<span class="badge ok">Godkendt</span>'
+        : x.b.length ? '<span class="badge err">Blokeret</span>' : '<span class="badge warn">Afventer</span>';
+      var btn = !c.approved && !x.b.length ? '<button data-approve="' + i + '">Godkend</button>' : "";
+      var flags = x.b.map(function (m) {
+        return '<div class="flag err"><span>⛔ ' + esc(m) + '</span>' +
+          '<select id="tr' + i + '"><option value="taxa">Taxa</option><option value="selv"' + (c.transport === "selv" ? " selected" : "") + '>Kører selv</option><option value="ingen">Ingen udgift</option></select>' +
+          '<select id="zn' + i + '"><option value="">Zone…</option>' + [1,2,3,4,5,6].map(function (z) { return '<option value="' + z + '">' + z + ' zoner</option>'; }).join("") + '</select>' +
+          '<button data-fix="' + i + '">Ret og beregn igen</button></div>';
+      }).join("") + c.warns.map(function (m) { return '<div class="flag warn"><span>⚠ ' + esc(m) + '</span></div>'; }).join("");
+      var grund = r.steps.map(function (s, n) {
+        return '<tr><td>' + (n + 1) + '</td><td>' + esc(s.t) + '</td><td>' + esc(s.f) + '</td><td>' + esc(s.i) + '</td><td class="r">' + esc(s.r) + '</td></tr>' +
+          (s.note ? '<tr><td></td><td colspan="4" class="note">' + esc(s.note) + '</td></tr>' : "");
+      }).join("");
+      return '<div class="item' + (x.b.length ? " blocked" : "") + '">' +
+        '<div class="row"><div><p class="nm">' + esc(c.name) + ' <span class="mu" style="font-weight:400">Tj.nr. ' + esc(c.tj) + '</span></p>' +
+        '<p class="mu">' + (c.dept ? esc(c.dept) : "—") + ' · ' + hm(c.min) + ' timer · ' + transportName(c) + zoneTxt + '</p></div>' +
+        '<span class="right"><span class="mu">Løn før skat</span><br>' + kr(r.before) + '</span>' +
+        '<span class="right"><span class="mu">Træk 991</span><br>' + (r.ok ? kr(r.deduction) : "—") + '</span>' +
+        '<span class="right"><span class="mu">Udbetaling 991</span><br><strong>' + (r.ok ? kr(r.payout) : "—") + '</strong></span>' +
+        '<span>' + badge + '</span><span>' + btn + '</span></div>' +
+        (flags ? '<div class="flags">' + flags + '</div>' : "") +
+        (r.ok ? '<details><summary>Se beregningsgrundlag</summary><table class="t"><thead><tr><th>Nr.</th><th>Trin</th><th>Formel</th><th>Indsat</th><th class="r">Resultat</th></tr></thead><tbody>' + grund + '</tbody></table></details>' : "") +
+        '</div>';
+    }).join("") : '<div class="item"><div class="row" style="grid-template-columns:1fr"><span class="mu">Ingen borgere i dette filter.</span></div></div>';
+
+    el("hist").innerHTML = history.slice().reverse().map(function (h, n) {
+      return '<div class="hist"><span>' + h.id + (n === 0 ? ' <span class="badge info">Gældende</span>' : "") + '</span>' +
+        '<span class="mu">' + h.when + ' · ' + h.user + '</span><button data-pdf="' + h.id + '">Åbn PDF</button></div>';
+    }).join("");
+  }
+
+  function recalc(msg) {
+    reportNo++;
+    history.push({ id: "2026-09-" + String(reportNo).padStart(3, "0"), when: "22.10.2026 " + new Date().toTimeString().slice(0, 5), user: "admin-demo" });
+    citizens.forEach(function (c) { c.approved = false; });
+    toast(msg);
+  }
+
+  document.addEventListener("click", function (e) {
+    var t = e.target;
+    if (t.dataset.f) { filter = t.dataset.f; render(); }
+    else if (t.dataset.approve !== undefined) { citizens[+t.dataset.approve].approved = true; render(); }
+    else if (t.dataset.fix !== undefined) {
+      var i = +t.dataset.fix, z = el("zn" + i).value;
+      citizens[i].transport = el("tr" + i).value;
+      if (citizens[i].transport !== "ingen" && !z) { toast("Vælg en zone først."); return; }
+      citizens[i].zones = z ? +z : null;
+      recalc("Beregnet igen som " + "2026-09-" + String(reportNo + 1).padStart(3, "0") + ". Tidligere godkendelser er bortfaldet.");
+      render();
+    }
+    else if (t.dataset.pdf) { toast("Skitse: her åbnes PDF-rapporten " + t.dataset.pdf + " (uden CPR og adresse)."); }
+    else if (t.id === "pdfBtn") { toast("Skitse: her åbnes PDF-rapporten (uden CPR og adresse)."); }
+    else if (t.id === "approveAll") {
+      var skipped = 0;
+      citizens.forEach(function (c) { if (blockers(c).length) skipped++; else c.approved = true; });
+      render();
+      toast(skipped ? skipped + " borger kunne ikke godkendes og skal rettes først." : "Alle borgere er godkendt.");
+    }
+    else if (t.id === "reopen") { citizens.forEach(function (c) { c.approved = false; }); render(); toast("Kørslen er genåbnet. Godkendelserne er fjernet."); }
+    else if (t.id === "exportBtn") { toast("Skitse: her hentes lønudtrækket (CSV) for lønart 110 og 991."); }
+    else if (t.id === "recalcBtn") { el("recalcConfirm").style.display = "flex"; }
+    else if (t.id === "recalcNo") { el("recalcConfirm").style.display = "none"; }
+    else if (t.id === "recalcYes") { el("recalcConfirm").style.display = "none"; recalc("Beregnet igen. Tidligere godkendelser er bortfaldet."); render(); }
+  });
+
+  render();
+</script>
+</body>
+</html>

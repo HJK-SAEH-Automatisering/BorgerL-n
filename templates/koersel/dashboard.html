@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Kørsler{% endblock %}
+{% block wrapclass %}smal{% endblock %}
+{% block content %}
+<h1>Kørsler</h1>
+<p class="sub">Vælg en måned for at starte en ny kørsel, eller åbn en eksisterende.</p>
+<form method="post" class="card pad" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+  {% csrf_token %}
+  <label for="maaned">Måned</label>
+  <input type="month" id="maaned" name="maaned" value="{{ standard_maaned }}" required>
+  <button class="primary" type="submit">Start kørsel</button>
+</form>
+<h2>Tidligere kørsler</h2>
+{% if koersler %}
+<div class="rows">
+  {% for k in koersler %}
+  <div class="row" style="grid-template-columns: 1fr 140px 120px">
+    <div><p class="nm">{{ k.navn|capfirst }}</p><p class="mu">{% if k.filnavn %}{{ k.filnavn }}{% else %}Ingen fil uploadet{% endif %}</p></div>
+    <span class="badge {% if k.status == 'godkendt' %}ok{% elif k.status == 'beregnet' %}info{% else %}warn{% endif %}">{{ k.get_status_display }}</span>
+    <a class="btn" href="{% if k.status == 'kladde' %}{% url 'upload' k.pk %}{% else %}{% url 'godkend' k.pk %}{% endif %}">Åbn</a>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="sub">Ingen kørsler endnu. Start den første ovenfor.</p>
+{% endif %}
+{% endblock %}

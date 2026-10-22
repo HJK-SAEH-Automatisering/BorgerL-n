@@ -1,0 +1,6 @@
+<div class="stepper" aria-label="Trin i kørslen">
+  <a class="stp {% if steg == 1 %}on{% elif steg > 1 %}done{% endif %}" href="{% url 'upload' koersel.pk %}">1 Upload fra Punchly</a>
+  <a class="stp {% if steg == 2 %}on{% elif steg > 2 %}done{% endif %}" href="{% url 'gennemse' koersel.pk %}">2 Gennemse transport</a>
+  <a class="stp {% if steg == 3 %}on{% elif steg > 3 %}done{% endif %}" href="{% url 'undtagelser' koersel.pk %}">3 Undtagelser</a>
+  <a class="stp {% if steg == 4 %}on{% endif %}" href="{% url 'godkend' koersel.pk %}">4 Godkend</a>
+</div>
