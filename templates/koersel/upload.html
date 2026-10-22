@@ -8,7 +8,7 @@
 <form method="post" enctype="multipart/form-data">
   {% csrf_token %}
   <div class="drop">
-    <p id="filnavn" style="margin:0 0 10px">{% if koersel.filnavn %}Sidst uploadet: {{ koersel.filnavn }}{% else %}Ingen fil valgt{% endif %}</p>
+    <p id="filnavn" style="margin:0 0 10px">{% if koersel.filnavn %}Sidst uploadet: {{ koersel.filnavn }}{% if koersel.uploadet_af %}, af {{ koersel.uploadet_af.get_username }}{% endif %}{% if koersel.uploadet %}, {{ koersel.uploadet|date:"d.m.Y" }} kl. {{ koersel.uploadet|date:"H:i" }}{% endif %}{% else %}Ingen fil valgt{% endif %}</p>
     <input type="file" name="fil" id="fil" accept=".xlsx">
   </div>
   <div class="actions">

@@ -65,7 +65,7 @@ def upload(request, pk):
             except ImportFejl as e:
                 fejl = str(e)
             else:
-                services.opret_linjer(koersel, raekker, fil.name)
+                services.opret_linjer(koersel, raekker, fil.name, request.user)
                 log(request.user, "Uploadede timefil", koersel, f"{fil.name}, {len(raekker)} rækker")
                 return redirect("gennemse", pk=koersel.pk)
     return render(request, "koersel/upload.html", _kontekst(koersel, 1, fejl=fejl))

@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 from openpyxl import Workbook
 
 from audit.models import AuditLog
@@ -102,6 +103,58 @@ class FlowTests(TestCase):
         k = self.opret_og_upload([("Person 1", "44:12"), ("  person 2 ", "10:00"), ("Ukendt", "5:00")])
         status = {l.fil_navn.strip(): l.match_status for l in k.linjer.all()}
         self.assertEqual(status, {"Person 1": "matchet", "person 2": "matchet", "Ukendt": "ingen"})
+
+    def test_upload_gemmer_hvem_og_hvornaar_og_viser_det(self):
+        k = self.opret_og_upload([("Person 1", "44:12")])
+        k.refresh_from_db()
+        self.assertEqual(k.uploadet_af, self.bruger)
+        self.assertIsNotNone(k.uploadet)
+        svar = self.client.get(reverse("upload", args=[k.pk]))
+        self.assertContains(svar, "Sidst uploadet: punchly.xlsx, af tester, ")
+        self.assertContains(svar, timezone.localtime(k.uploadet).strftime("%d.%m.%Y kl. %H:%M"))
+
+    def test_ny_upload_erstatter_fil_bruger_og_tidspunkt(self):
+        k = self.opret_og_upload([("Person 1", "44:12")])
+        foer = timezone.now() - timedelta(days=3)
+        Koersel.objects.filter(pk=k.pk).update(uploadet=foer)
+        anden = get_user_model().objects.create_user("anden", password="x-test-adgangskode-2")
+        self.client.force_login(anden)
+        self.client.post(reverse("upload", args=[k.pk]), {"fil": xlsx([("Person 2", "1:00")], navn="ny.xlsx")})
+        k.refresh_from_db()
+        self.assertEqual((k.filnavn, k.uploadet_af), ("ny.xlsx", anden))
+        self.assertGreater(k.uploadet, foer)
+        svar = self.client.get(reverse("upload", args=[k.pk]))
+        self.assertContains(svar, "Sidst uploadet: ny.xlsx, af anden, ")
+        self.assertNotContains(svar, "punchly.xlsx")
+
+    def test_afvist_upload_aendrer_ikke_sidst_uploadet(self):
+        k = self.opret_og_upload([("Person 1", "44:12")])
+        foer = Koersel.objects.get(pk=k.pk)
+        self.client.post(reverse("upload", args=[k.pk]), {"fil": SimpleUploadedFile("daarlig.xlsx", b"ikke en excel-fil")})
+        efter = Koersel.objects.get(pk=k.pk)
+        self.assertEqual((efter.filnavn, efter.uploadet_af, efter.uploadet), (foer.filnavn, foer.uploadet_af, foer.uploadet))
+
+    def test_koersel_uploadet_foer_felterne_viser_kun_filnavn(self):
+        k = Koersel.objects.create(maaned=date(2026, 9, 1), filnavn="gammel.xlsx")
+        svar = self.client.get(reverse("upload", args=[k.pk]))
+        self.assertContains(svar, "Sidst uploadet: gammel.xlsx<")
+        self.assertNotContains(svar, ", af ")
+        self.assertNotContains(svar, " kl. ")
+
+    def test_slettet_bruger_viser_filnavn_og_tidspunkt_uden_navn(self):
+        k = self.opret_og_upload([("Person 1", "44:12")])
+        self.bruger.delete()
+        self.client.force_login(get_user_model().objects.create_user("ny", password="x-test-adgangskode-3"))
+        k.refresh_from_db()
+        self.assertIsNone(k.uploadet_af)
+        svar = self.client.get(reverse("upload", args=[k.pk]))
+        self.assertContains(svar, "Sidst uploadet: punchly.xlsx, ")
+        self.assertNotContains(svar, ", af ")
+        self.assertContains(svar, " kl. ")
+
+    def test_uden_upload_staar_der_ingen_fil_valgt(self):
+        k = Koersel.objects.create(maaned=date(2026, 9, 1))
+        self.assertContains(self.client.get(reverse("upload", args=[k.pk])), "Ingen fil valgt")
 
     def test_flertydigt_navn_afklares_aldrig_automatisk(self):
         Borger.objects.create(navn="Person 1", tj_nr="9101")
