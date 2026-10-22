@@ -10,6 +10,9 @@ Her hører også **afvisninger**: et fund der ikke bliver en opgave, skal have s
 
 | Dato | Nr. | Beslutning | Begrundelse | Rolle |
 |---|---|---|---|---|
+| 2026-10-22 | — | Emnet om at afprøve MSSQL og køre parallelt med Excel-arket droppet fra Kommende | Det er implementering og drift, som menneskerne tager selv. Ikke noget der bygges som opgave. Besluttet af mennesket | architect |
+| 2026-10-22 | — | README'en skrives ikke om nu. Emnet bliver stående på Kommende | Mennesket afviste at gøre det nu. Den kan ikke sige, hvordan man kommer ind i appen, før hosting er afklaret. Besluttet af mennesket | architect |
+| 2026-10-22 | — | Tre emner droppet fra Kommende: bekræft beregningsreglerne med en fagperson, afprøv importen på en rigtig Punchly-eksport, afklar hosting, login med Entra ID og opbevaring af CPR og PDF-rapporter med IT og DPO | Mennesket bad om at droppe dem. De er samtaler og afprøvninger med mennesker, ikke noget der bygges. Besluttet af mennesket | architect |
 | 2026-10-22 | task-0002 | Opgaven afsluttet som bygget. README rettet med de to ændringer | Alle kriterier holder: hele testsuiten er grøn (51 tests), og mennesket har prøvet rulning og markering på Undtagelser i en browser. Besluttet af mennesket og architect | architect |
 | 2026-10-22 | test-0001 | Hele testsuiten er grøn (51 tests, ingen migreringsændringer). Browserprøven af rulning og markering udføres af architect i forhåndsvisningen, ikke af mennesket | Testeren kan ikke starte en browser, og kontrakten lægger øjenprøven hos architect eller mennesket. Besluttet af architect | architect |
 | 2026-10-22 | test-0001 | Fund 4 afvist: ingen test af at Dashboard og Gennemse stadig kun viser filnavnet | Ændringen rører dem ikke. En test af at noget er uændret, har ingen værdi. Besluttet af architect | architect |
