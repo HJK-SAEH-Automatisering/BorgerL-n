@@ -22,6 +22,8 @@ class Koersel(models.Model):
     maaned = models.DateField(unique=True, help_text="Første dag i måneden")
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.KLADDE)
     filnavn = models.CharField(max_length=255, blank=True)
+    uploadet_af = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    uploadet = models.DateTimeField(null=True, blank=True)
     oprettet_af = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
     oprettet = models.DateTimeField(auto_now_add=True)
 

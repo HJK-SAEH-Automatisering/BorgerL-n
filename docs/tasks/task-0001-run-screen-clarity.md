@@ -1,7 +1,7 @@
 ---
 nummer: task-0001
 titel: Tydeligere kørselsskærme: sidst uploadet og første manglende række
-status: planlagt
+status: afsluttet
 kilde: mockup-0002, mockup-0004
 oprettet: 2026-10-22
 ---
@@ -65,6 +65,9 @@ intet
 
 ## Åbne punkter
 intet
+
+## Afslutning
+afvist — opgaven blev droppet af mennesket efter at en første bygning ikke kunne efterprøves (Django i `.venv` var spærret af en sikkerhedskontrol). Definitionen overtages uændret af task-0002; koden blev kasseret. Se beslutningsloggen.
 
 ## Indvendinger
 <Udfyldes af andre roller.>

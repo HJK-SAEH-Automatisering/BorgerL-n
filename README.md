@@ -7,9 +7,13 @@ Arkitektur, regler og begrundelser står i [docs/losningsforslag.md](docs/losnin
 ## Arbejdsgang
 
 1. **Upload fra Punchly** – Excel-fil (.xlsx) med kolonnerne "Navn" og "Total timer (timer:minutter)".
+   Skærmen viser, hvem der sidst uploadede en fil, og hvornår. Uploades en ny fil, erstattes
+   rækkerne og rettelserne i de senere trin.
 2. **Gennemse transport** – afstand og transport pr. borger. Rækker, der ikke kan matches på navn,
    afklares her. Rettelser gemmes i borgerregisteret.
 3. **Undtagelser** – transport, zoner og individuel beregning for måneden, med statuslinje.
+   Mangler en borger oplysninger, når der trykkes "Beregn", rulles siden til den første række,
+   der mangler noget, og rækken markeres.
 4. **Godkend** – beregningsgrundlag pr. borger. Intet kan eksporteres, før alle er godkendt.
 
 Hver gang der trykkes "Beregn", gemmes et uforanderligt snapshot og en PDF-rapport, der

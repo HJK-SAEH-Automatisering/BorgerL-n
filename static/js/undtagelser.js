@@ -6,6 +6,20 @@
 
   function felt(row, k) { return row.querySelector('[data-felt="' + k + '"]'); }
 
+  function fjernMarkering() {
+    rows.forEach(function (row) { row.classList.remove('mangler'); });
+  }
+
+  // Markerer den første række, der ikke er klar, og ruller den ind i midten af vinduet.
+  function visFoersteManglende() {
+    fjernMarkering();
+    var foerste = rows.filter(function (row) { return !felt(row, 'st').classList.contains('ok'); })[0];
+    if (!foerste) return;
+    foerste.classList.add('mangler');
+    var rolig = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    foerste.scrollIntoView({ block: 'center', behavior: rolig ? 'auto' : 'smooth' });
+  }
+
   function opdater() {
     var klar = 0;
     rows.forEach(function (row) {
@@ -30,14 +44,16 @@
     return rows.length - klar;
   }
 
-  form.addEventListener('input', function () { msg.textContent = ''; msg.className = 'msg'; opdater(); });
+  form.addEventListener('input', function () { msg.textContent = ''; msg.className = 'msg'; fjernMarkering(); opdater(); });
   document.getElementById('beregn').addEventListener('click', function (e) {
     var mangler = opdater();
     if (mangler > 0) {
       e.preventDefault();
       msg.className = 'msg bad';
       msg.textContent = mangler + (mangler === 1 ? ' borger mangler' : ' borgere mangler') + ' oplysninger, før du kan beregne';
+      visFoersteManglende();
     }
   });
   opdater();
+  if (form.dataset.afvist) visFoersteManglende();
 })();

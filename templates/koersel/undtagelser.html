@@ -10,12 +10,12 @@
 <p class="sub">Rettelser her gælder kun denne måned. Felter, der ikke er relevante for den valgte transport, slås fra.</p>
 {% for g in generelt %}<div class="flash error">{{ g }}</div>{% endfor %}
 
-<form method="post" id="undtagelser" data-zoner="{{ zoner|join:',' }}">
+<form method="post" id="undtagelser" data-zoner="{{ zoner|join:',' }}"{% if afvist %} data-afvist="1"{% endif %}>
   {% csrf_token %}
   <div class="rows">
     <div class="row head-row g3"><span>Borger</span><span>Transport</span><span>Zoner</span><span>Individuel beregning</span><span>Status</span></div>
     {% for l in linjer %}
-    <div class="row g3" data-linje data-sats-mangler="{% if l.sats_mangler %}1{% endif %}">
+    <div class="row g3{% if afvist and l.pk == foerste_mangler %} mangler{% endif %}" data-linje data-sats-mangler="{% if l.sats_mangler %}1{% endif %}">
       <div>
         <p class="nm">{{ l.borger.navn }}</p>
         <p class="mu">{{ l.timer_tekst }} timer · {{ l.borger.afstand_km|floatformat:1 }} km{% if l.dobbelt %} · navn flere gange i filen{% endif %}

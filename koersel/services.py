@@ -26,7 +26,7 @@ class BeregningsFejl(Exception):
         super().__init__("Beregningen kan ikke køres.")
 
 
-def opret_linjer(koersel: Koersel, raekker: list[Raekke], filnavn: str) -> None:
+def opret_linjer(koersel: Koersel, raekker: list[Raekke], filnavn: str, bruger=None) -> None:
     antal_pr_navn = Counter(normaliser_navn(r.navn) for r in raekker)
     borgere_pr_navn: dict[str, list[Borger]] = {}
     for b in Borger.objects.filter(aktiv=True):
@@ -50,6 +50,8 @@ def opret_linjer(koersel: Koersel, raekker: list[Raekke], filnavn: str) -> None:
                 linje.kandidater = ",".join(str(b.pk) for b in kandidater)
             linje.save()
         koersel.filnavn = filnavn
+        koersel.uploadet_af = bruger
+        koersel.uploadet = timezone.now()
         koersel.status = Koersel.Status.KLADDE
         koersel.save()
 
