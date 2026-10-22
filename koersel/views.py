@@ -200,12 +200,14 @@ def undtagelser(request, pk):
         return redirect("gennemse", pk=pk)
 
     generelt: list[str] = []
+    afvist = False
     if request.method == "POST":
         _laes_undtagelser(request, koersel)
         if request.POST.get("handling") == "beregn":
             try:
                 beregning = services.koer_beregning(koersel, request.user)
             except services.BeregningsFejl as e:
+                afvist = True
                 generelt = e.generelt
                 messages.error(request, "Beregningen blev ikke kørt, fordi nogle borgere mangler oplysninger.")
             else:
@@ -236,6 +238,8 @@ def undtagelser(request, pk):
             transport_valg=TRANSPORT_VALG,
             klar=sum(1 for l in linjer if not l.fejl),
             generelt=generelt,
+            afvist=afvist,
+            foerste_mangler=next((l.pk for l in linjer if l.fejl), None),
         ),
     )
 

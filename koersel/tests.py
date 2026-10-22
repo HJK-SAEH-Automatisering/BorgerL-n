@@ -188,6 +188,35 @@ class FlowTests(TestCase):
         self.assertContains(svar, "Mangler zone")
         self.assertEqual(k.beregninger.count(), 0)
 
+    def test_afvist_beregning_markerer_foerste_manglende_raekke(self):
+        Borger.objects.create(navn="Person 4", tj_nr="9004", cpr="000000-0004", sats=Decimal("20"))
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 3", "10:00"), ("Person 4", "5:00")])
+        svar = self.undtagelser(k)
+        self.assertEqual(svar.status_code, 200)
+        self.assertContains(svar, 'data-afvist="1"')
+        self.assertContains(svar, "row g3 mangler", count=1)
+        html = svar.content.decode()
+        markeret = html.index("row g3 mangler")
+        self.assertLess(html.index("Person 1"), markeret)
+        self.assertLess(markeret, html.index("Person 3"))
+        self.assertLess(markeret, html.index("Person 4"))
+        self.assertContains(svar, "Beregningen blev ikke kørt, fordi nogle borgere mangler oplysninger.")
+        self.assertContains(svar, "1 af 3 klar")
+
+    def test_undtagelser_uden_afvisning_har_ingen_markering(self):
+        k = self.opret_og_upload([("Person 3", "10:00")])
+        svar = self.client.get(reverse("undtagelser", args=[k.pk]))
+        self.assertNotContains(svar, "data-afvist")
+        self.assertNotContains(svar, "row g3 mangler")
+
+    def test_gem_kladde_med_manglende_raekke_markerer_ikke(self):
+        k = self.opret_og_upload([("Person 3", "10:00")])
+        svar = self.undtagelser(k, handling="gem")
+        self.assertRedirects(svar, reverse("undtagelser", args=[k.pk]))
+        svar = self.client.get(reverse("undtagelser", args=[k.pk]))
+        self.assertNotContains(svar, "data-afvist")
+        self.assertNotContains(svar, "row g3 mangler")
+
     def test_hele_flowet_beregn_pdf_godkend_eksport(self):
         k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
         svar = self.undtagelser(k)
