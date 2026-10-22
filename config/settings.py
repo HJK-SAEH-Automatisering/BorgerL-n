@@ -1,7 +1,17 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def load_env(path):
+    """Læs nøgler fra en .env-fil ind i miljøet. Maskinens egne variabler vinder; mangler filen, sker intet."""
+    load_dotenv(path, override=False, encoding="utf-8")
+
+
+load_env(BASE_DIR / ".env")
 
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
