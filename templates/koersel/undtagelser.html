@@ -2,6 +2,7 @@
 {% load static %}
 {% block title %}Undtagelser{% endblock %}
 {% block stepper %}{% include "koersel/_stepper.html" %}{% endblock %}
+{% block sideclass %} med-trin{% endblock %}
 {% block content %}
 <div class="head">
   <h1>Udfyld undtagelser · {{ koersel.navn }}</h1>
@@ -31,7 +32,7 @@
       </select>
       <div class="ind">
         <input type="checkbox" name="i_{{ l.pk }}" data-felt="i" aria-label="Individuel beregning for {{ l.borger.navn }}" {% if l.individuel %}checked{% endif %}>
-        <input type="number" min="1" max="31" name="d_{{ l.pk }}" data-felt="d" placeholder="Dage" aria-label="Fremmødedage for {{ l.borger.navn }}" value="{{ l.dage|default_if_none:'' }}">
+        <input type="number" min="1" max="31" name="d_{{ l.pk }}" data-felt="d" data-fil-dage="{{ l.fil_dage|default_if_none:'' }}" placeholder="Dage" aria-label="Fremmødedage for {{ l.borger.navn }}" value="{% if l.dage is not None %}{{ l.dage }}{% elif l.individuel %}{{ l.fil_dage|default_if_none:'' }}{% endif %}">
       </div>
       <span class="badge {{ l.status_klasse }}" data-felt="st" title="{{ l.fejl|join:' ' }}">{{ l.status_tekst }}</span>
     </div>
