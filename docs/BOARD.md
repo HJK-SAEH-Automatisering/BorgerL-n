@@ -29,7 +29,6 @@ eller nummeret på den rapport opgaven kom af.>
 
 | Emne |
 |---|
-| Skriv README om, så den er til brugere og ikke til udviklere |
 | Indfør versionsnummer, start på 0.1.0, før første udrulning |
 
 <Den grove liste: hvad architect kan se der skal laves. **Ingen numre.**
