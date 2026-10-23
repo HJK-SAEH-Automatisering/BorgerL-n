@@ -27,7 +27,7 @@ PERSONER = [
     ("Person 12", "81:35", "Snedkeriet", "13.2", "selv", 3, "20"),
 ]
 
-# opdigtede fremmødedage i måneden (kolonnen "Antal dage"); Person 5 og 8 har ingen (tom celle)
+# opdigtede fremmødedage i måneden (kolonnen "Antal arbejdsdage"); Person 5 og 8 har ingen (tom celle)
 DAGE = {
     "Person 1": 17, "Person 2": 20, "Person 3": 16, "Person 4": 19, "Person 5": None, "Person 6": 3,
     "Person 7": 10, "Person 8": None, "Person 9": 11, "Person 10": 12, "Person 11": 2, "Person 12": 18,
@@ -63,7 +63,7 @@ class Command(BaseCommand):
         wb = Workbook()
         ws = wb.active
         ws.title = "Ark1"
-        ws["C4"], ws["D4"], ws["E4"] = "Navn", "Total timer (timer:minutter)", "Antal dage"
+        ws["C4"], ws["D4"], ws["E4"] = "Navn", "Total timer (timer:minutter)", "Antal arbejdsdage"
         for r, (navn, tid, *_rest) in enumerate(PERSONER, start=5):
             ws.cell(row=r, column=3, value=navn)
             ws.cell(row=r, column=4, value=tid)

@@ -66,13 +66,23 @@ class ImporterTests(TestCase):
         with self.assertRaisesMessage(ImportFejl, "Række 6 (B)"):
             laes_timefil(xlsx([("A", "1:00"), ("B", "meget")]))
 
-    def test_laeser_antal_dage(self):
-        r = laes_timefil(xlsx([("A", "1:00", 17), ("B", "2:00", "5"), ("C", "3:00", 31.0)], header=("Navn", "Total timer", "Antal dage")))
+    def test_laeser_antal_arbejdsdage(self):
+        r = laes_timefil(xlsx([("A", "1:00", 17), ("B", "2:00", "5"), ("C", "3:00", 31.0)], header=("Navn", "Total timer", "Antal arbejdsdage")))
         self.assertEqual([x.dage for x in r], [17, 5, 31])
 
-    def test_antal_dage_ses_bort_fra_store_bogstaver_og_mellemrum(self):
-        r = laes_timefil(xlsx([("A", "1:00", 4)], header=("Navn", "Total timer", "  ANTAL dage ")))
-        self.assertEqual(r[0].dage, 4)
+    def test_laeser_ogsaa_antal_dage(self):
+        r = laes_timefil(xlsx([("A", "1:00", 17), ("B", "2:00", "5")], header=("Navn", "Total timer", "Antal dage")))
+        self.assertEqual([x.dage for x in r], [17, 5])
+
+    def test_dagskolonnen_ses_bort_fra_store_bogstaver_og_mellemrum(self):
+        for overskrift in ("  ANTAL arbejdsdage ", "antal ARBEJDSDAGE", " Antal   Arbejdsdage", "  ANTAL dage ", "antal DAGE"):
+            with self.subTest(overskrift=overskrift):
+                r = laes_timefil(xlsx([("A", "1:00", 4)], header=("Navn", "Total timer", overskrift)))
+                self.assertEqual(r[0].dage, 4)
+
+    def test_dagskolonnen_kan_staa_foer_navn_og_timer(self):
+        r = laes_timefil(xlsx([(8, "A", "1:00")], header=("Antal arbejdsdage", "Navn", "Total timer (timer:minutter)")))
+        self.assertEqual([(x.navn, x.minutter, x.dage) for x in r], [("A", 60, 8)])
 
     def test_tom_celle_giver_ingen_dage(self):
         r = laes_timefil(xlsx([("A", "1:00", None), ("B", "2:00", "  "), ("C", "3:00", 9)], header=("Navn", "Total timer", "Antal dage")))
@@ -83,11 +93,12 @@ class ImporterTests(TestCase):
         self.assertEqual([(x.minutter, x.dage) for x in r], [(60, None), (120, None)])
 
     def test_ugyldige_dage_afviser_hele_filen_med_raekke_og_vaerdi(self):
-        header = ("Navn", "Total timer", "Antal dage")
-        for ugyldig in (0, 32, -1, 2.5, "mange", "4,5", True):
-            with self.subTest(ugyldig=ugyldig):
-                with self.assertRaisesMessage(ImportFejl, f"Række 6 (B): '{ugyldig}' er ikke et gyldigt antal dage"):
-                    laes_timefil(xlsx([("A", "1:00", 3), ("B", "2:00", ugyldig)], header=header))
+        for overskrift in ("Antal arbejdsdage", "Antal dage"):
+            for ugyldig in (0, 32, -1, 2.5, "mange", "4,5", True):
+                with self.subTest(overskrift=overskrift, ugyldig=ugyldig):
+                    header = ("Navn", "Total timer", overskrift)
+                    with self.assertRaisesMessage(ImportFejl, f"Række 6 (B): '{ugyldig}' i kolonnen '{overskrift}' er ikke et gyldigt antal dage"):
+                        laes_timefil(xlsx([("A", "1:00", 3), ("B", "2:00", ugyldig)], header=header))
 
 
 TEST_MEDIA = tempfile.mkdtemp(prefix="borgerlon-test-")
@@ -184,7 +195,7 @@ class FlowTests(TestCase):
     def upload_med_dage(self, raekker):
         self.client.post(reverse("dashboard"), {"maaned": "2026-10"})
         k = Koersel.objects.get()
-        fil = xlsx(raekker, header=("Navn", "Total timer", "Antal dage"), navn="punchly.xlsx")
+        fil = xlsx(raekker, header=("Navn", "Total timer", "Antal arbejdsdage"), navn="punchly.xlsx")
         self.assertRedirects(self.client.post(reverse("upload", args=[k.pk]), {"fil": fil}), reverse("gennemse", args=[k.pk]))
         return k
 
@@ -194,7 +205,7 @@ class FlowTests(TestCase):
 
     def test_upload_beskriver_antal_dage_som_valgfri_kolonne(self):
         k = Koersel.objects.create(maaned=date(2026, 9, 1))
-        self.assertContains(self.client.get(reverse("upload", args=[k.pk])), 'Kolonnen "Antal dage"')
+        self.assertContains(self.client.get(reverse("upload", args=[k.pk])), 'Kolonnen "Antal arbejdsdage"')
 
     def test_undtagelser_forudfylder_dage_kun_ved_individuel_beregning(self):
         k = self.upload_med_dage([("Person 1", "44:12", 17), ("Person 3", "10:00", 8)])

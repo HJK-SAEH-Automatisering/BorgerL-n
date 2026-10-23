@@ -5,7 +5,7 @@
 {% block wrapclass %}smal{% endblock %}
 {% block content %}
 <h1>Upload månedens timefil · {{ koersel.navn }}</h1>
-<p class="sub">Vælg den Excel-fil (.xlsx), du har hentet fra Punchly. Filen skal have kolonnerne "Navn" og "Total timer (timer:minutter)". Kolonnen "Antal dage" (fremmødedage i måneden) er valgfri; står den med, bruges tallet som forslag, når en borger får individuel beregning.</p>
+<p class="sub">Vælg den Excel-fil (.xlsx), du har hentet fra Punchly. Filen skal have kolonnerne "Navn" og "Total timer (timer:minutter)". Kolonnen "Antal arbejdsdage" (fremmødedage i måneden) er valgfri; står den med, bruges tallet som forslag, når en borger får individuel beregning.</p>
 <form method="post" enctype="multipart/form-data">
   {% csrf_token %}
   <div class="drop">
