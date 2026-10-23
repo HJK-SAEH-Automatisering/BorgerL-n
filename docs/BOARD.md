@@ -30,7 +30,6 @@ eller nummeret på den rapport opgaven kom af.>
 | Emne |
 |---|
 | Skriv README om, så den er til brugere og ikke til udviklere |
-| Indlæs `.env` automatisk i indstillingerne |
 | Indfør versionsnummer, start på 0.1.0, før første udrulning |
 
 <Den grove liste: hvad architect kan se der skal laves. **Ingen numre.**
@@ -43,6 +42,7 @@ ellers fyldes `docs/tasks/` med halve idéer.>
 |---|---|---|
 | task-0001 | Tydeligere kørselsskærme: sidst uploadet og første manglende række | afvist |
 | task-0002 | Tydeligere kørselsskærme: sidst uploadet og første manglende række | bygget |
+| task-0003 | Indlæs .env automatisk i indstillingerne | bygget |
 
 <`Udfald` er `bygget` eller `afvist`. Flyt hertil når architect har vurderet
 opgaven — ikke når udrulningen er sket; udrulning er ikke en status.
