@@ -43,6 +43,23 @@ class LoadEnvTests(SimpleTestCase):
         self.assertEqual(os.environ[NOEGLE_A], "fra-maskinen")
         self.assertEqual(os.environ[NOEGLE_B], "fra-filen")
 
+    def test_tom_vaerdi_i_env_behandles_som_ikke_sat(self):
+        sti = self.skriv_env(f"{NOEGLE_A}=\n{NOEGLE_B}=b-vaerdi\n")
+        settings.load_env(sti)
+        self.assertNotIn(NOEGLE_A, os.environ)
+        self.assertEqual(os.environ[NOEGLE_B], "b-vaerdi")
+
+    def test_tom_vaerdi_i_env_overskriver_ikke_maskinens_vaerdi(self):
+        os.environ[NOEGLE_A] = "fra-maskinen"
+        sti = self.skriv_env(f"{NOEGLE_A}=\n")
+        settings.load_env(sti)
+        self.assertEqual(os.environ[NOEGLE_A], "fra-maskinen")
+
+    def test_standardvaerdien_gaelder_naar_noeglen_er_tom_i_env(self):
+        sti = self.skriv_env(f"{NOEGLE_A}=\n")
+        settings.load_env(sti)
+        self.assertEqual(os.environ.get(NOEGLE_A, "standard"), "standard")
+
     def test_manglende_env_goer_ingenting(self):
         foer = dict(os.environ)
         with mock.patch("sys.stdout") as stdout, mock.patch("sys.stderr") as stderr:
