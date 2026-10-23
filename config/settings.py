@@ -1,7 +1,21 @@
 import os
 from pathlib import Path
 
+from dotenv import dotenv_values
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def load_env(path):
+    """Læs nøgler fra en .env-fil ind i miljøet. Maskinens egne variabler vinder; mangler filen, sker intet.
+
+    En nøgle uden værdi i filen behandles som om den ikke var sat, så appens standardværdi gælder."""
+    for key, value in dotenv_values(path, encoding="utf-8").items():
+        if value and key not in os.environ:
+            os.environ[key] = value
+
+
+load_env(BASE_DIR / ".env")
 
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 

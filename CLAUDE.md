@@ -31,7 +31,9 @@ mennesker står i `README.md`.
 `seed_demo` opretter fiktive borgere, en demobruger og `eksempel/punchly-eksempel.xlsx`.
 Byg, formatering og linter er ikke sat op.
 
-Indstillinger læses fra processens miljøvariabler. Nøglerne står i `.env.example`.
+Indstillinger læses fra processens miljøvariabler. En `.env` i projektroden indlæses automatisk
+(`python-dotenv`, øverst i `config/settings.py`); maskinens egne variabler vinder over filen.
+Nøglerne står i `.env.example`.
 
 ## Struktur
 

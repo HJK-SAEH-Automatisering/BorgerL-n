@@ -49,6 +49,10 @@ er endnu ikke afprøvet mod en rigtig server.
 Øvrige miljøvariabler: `DJANGO_DEBUG` (sæt til `0` i drift), `DJANGO_SECRET_KEY` (påkrævet, når
 debug er slået fra), `DJANGO_ALLOWED_HOSTS`, `MEDIA_ROOT` (hvor PDF-rapporterne gemmes), `SQLITE_PATH`.
 
+Miljøvariablerne kan også stå i en fil, der hedder `.env`, i projektets rodmappe. Kopiér
+`.env.example` til `.env`, og udfyld kun de nøgler, du bruger. Nøgler uden værdi ignoreres, og
+variabler, der er sat på maskinen, vinder over filen. `.env` hører ikke i versionsstyringen.
+
 ## Test og kontrol
 
 ```bash
