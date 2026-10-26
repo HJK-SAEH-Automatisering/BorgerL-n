@@ -11,15 +11,17 @@ beregningen borger for borger. Intet bliver eksporteret, før alt er godkendt.
 Adressen til appen får du af den, der driver den. Hver måned går du fire trin igennem.
 
 1. **Upload.** Vælg måneden på forsiden, og upload timefilen fra Punchly. Det er en Excel-fil
-   (.xlsx) med kolonnerne "Navn" og "Total timer (timer:minutter)". Skærmen viser, hvem der
-   sidst uploadede en fil, og hvornår. Uploades en ny fil, erstattes rækkerne og dine rettelser i
+   (.xlsx) med kolonnerne "Navn" og "Total timer (timer:minutter)". Har filen også kolonnen
+   "Antal arbejdsdage" med den enkelte borgers fremmødedage, bruges tallet som forslag, når
+   individuel beregning vælges. Skærmen viser, hvem der sidst uploadede en fil, og hvornår. Uploades en ny fil, erstattes rækkerne og dine rettelser i
    de senere trin. Har filen rækker med ugyldige timer, afvises hele filen. Ret den, og upload igen.
 2. **Gennemse transport.** Her står afstand og transport for hver borger i filen. Rækker, som
    appen ikke kan genkende på navn, afklarer du selv. Appen gætter aldrig. Ændrer du afstand
    eller transport her, bliver det gemt hos borgeren og gælder fra nu af.
 3. **Undtagelser.** Her rettes transport, zoner og individuel beregning for denne måned. Det du
    retter her, gælder kun måneden. Felter, der ikke passer til den valgte transport, er slået
-   fra. Mangler en borger oplysninger, når du trykker "Beregn", rulles siden til den første
+   fra. Vælger du individuel beregning, står antal fremmødedage udfyldt fra filen, hvis den har
+   dem. Du kan rette tallet. Mangler en borger oplysninger, når du trykker "Beregn", rulles siden til den første
    række, der mangler noget.
 4. **Godkend.** Du kan se, hvordan beløbet er regnet ud for hver borger, og godkende en ad
    gangen eller alle på én gang. Først når alle er godkendt, kan du hente lønudtrækket (CSV).
