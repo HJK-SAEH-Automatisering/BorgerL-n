@@ -92,7 +92,8 @@ def gennemse(request, pk):
         handling = request.POST.get("handling")
         if handling == "afklar":
             linje = get_object_or_404(Linje, pk=request.POST.get("linje"), koersel=koersel)
-            borger = Borger.objects.filter(pk=request.POST.get("borger"), aktiv=True).first()
+            valgt = request.POST.get("borger", "")
+            borger = Borger.objects.filter(pk=valgt, aktiv=True).first() if valgt.isascii() and valgt.isdigit() else None
             if borger is None:
                 messages.error(request, "Vælg en medarbejder i listen.")
             else:
