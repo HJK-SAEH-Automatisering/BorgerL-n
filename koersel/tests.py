@@ -428,7 +428,6 @@ class FlowTests(TestCase):
             self.assertContains(svar, f"Åbn PDF-rapport {b.rapport_id}")
             self.assertContains(svar, "Beregning pr. medarbejder")
             self.assertContains(svar, "Tidligere beregninger for måneden")
-            self.assertContains(svar, "Tilbage til undtagelser")
 
         svar = self.client.get(url)
         tjek_fjernet(svar)
@@ -441,6 +440,27 @@ class FlowTests(TestCase):
         self.assertContains(svar, "Genåbn til rettelser")
         self.assertContains(svar, "Eksportér lønudtræk (CSV)")
         self.assertNotContains(svar, "Eksport er låst")
+
+    def test_godkend_skaermen_har_ikke_knappen_tilbage_til_undtagelser_men_trinsoejlen_linker_dertil(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        url = reverse("godkend", args=[k.pk])
+        undtagelser_url = reverse("undtagelser", args=[k.pk])
+
+        def tjek(svar):
+            self.assertEqual(svar.status_code, 200)
+            self.assertNotContains(svar, "Tilbage til undtagelser")
+            # Trinsøjlen har stadig sit eget link til Undtagelser, og det er det eneste
+            self.assertContains(
+                svar,
+                f'<a class="stp done" href="{undtagelser_url}">3 Undtagelser</a>',
+                html=False,
+            )
+            self.assertEqual(svar.content.decode().count(f'href="{undtagelser_url}"'), 1)
+
+        tjek(self.client.get(url))
+        self.client.post(url, {"handling": "godkend_alle"})
+        tjek(self.client.get(url))
 
     def test_godkend_skaermen_har_knap_til_beregningsgrundlag_i_stedet_for_foldet_tabel(self):
         k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
