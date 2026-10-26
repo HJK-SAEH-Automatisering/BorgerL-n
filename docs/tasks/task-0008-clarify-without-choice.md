@@ -2,7 +2,7 @@
 nummer: task-0008
 titel: Afklar uden valg giver en besked i stedet for en serverfejl
 kilde: interview
-status: i-gang
+status: afsluttet
 oprettet: 2026-10-26
 ---
 
