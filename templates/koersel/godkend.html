@@ -18,12 +18,12 @@
   {% if kan_eksportere %}
   <a class="btn" href="{% url 'eksport' koersel.pk %}">Eksportér lønudtræk (CSV)</a>
   {% else %}
-  <span class="mu">Eksport er låst, til alle borgere er godkendt.</span>
+  <span class="mu">Eksport er låst, til alle medarbejdere er godkendt.</span>
   {% endif %}
   <a class="btn" href="{% url 'undtagelser' koersel.pk %}">Tilbage til undtagelser</a>
 </div>
 
-<h2>Beregning pr. borger</h2>
+<h2>Beregning pr. medarbejder</h2>
 <div class="rows">
   {% for r in resultater %}
   <div style="border-bottom:0.5px solid var(--border)">

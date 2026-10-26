@@ -14,7 +14,7 @@
 <form method="post" id="undtagelser" data-zoner="{{ zoner|join:',' }}"{% if afvist %} data-afvist="1"{% endif %}>
   {% csrf_token %}
   <div class="rows">
-    <div class="row head-row g3"><span>Borger</span><span>Transport</span><span>Zoner</span><span>Individuel beregning</span><span>Status</span></div>
+    <div class="row head-row g3"><span>Medarbejder</span><span>Transport</span><span>Zoner</span><span>Individuel beregning</span><span>Status</span></div>
     {% for l in linjer %}
     <div class="row g3{% if afvist and l.pk == foerste_mangler %} mangler{% endif %}" data-linje data-sats-mangler="{% if l.sats_mangler %}1{% endif %}">
       <div>

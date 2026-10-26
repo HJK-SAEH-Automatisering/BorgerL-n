@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Borgere{% endblock %}
+{% block title %}Medarbejdere{% endblock %}
 {% block content %}
 <div class="head">
-  <h1>Borgerregister</h1>
-  <a class="btn primary" href="{% url 'borger_ny' %}">Opret borger</a>
+  <h1>Medarbejderregister</h1>
+  <a class="btn primary" href="{% url 'borger_ny' %}">Opret medarbejder</a>
 </div>
 <form method="get" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-  <input type="search" name="q" value="{{ q }}" placeholder="Søg på navn eller Tj.nr." aria-label="Søg borger" style="min-width:260px">
+  <input type="search" name="q" value="{{ q }}" placeholder="Søg på navn eller Tj.nr." aria-label="Søg medarbejder" style="min-width:260px">
   <button type="submit">Søg</button>
   <a class="btn" href="?vis=alle">Vis også inaktive</a>
 </form>
@@ -23,7 +23,7 @@
     <a class="btn" href="{% url 'borger_ret' b.pk %}">Ret</a>
   </div>
   {% empty %}
-  <div class="row"><span class="mu">Ingen borgere fundet.</span></div>
+  <div class="row"><span class="mu">Ingen medarbejdere fundet.</span></div>
   {% endfor %}
 </div>
 {% endblock %}
