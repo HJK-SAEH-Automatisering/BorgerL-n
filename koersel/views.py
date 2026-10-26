@@ -282,8 +282,6 @@ def godkend(request, pk):
             4,
             beregning=beregning,
             resultater=resultater,
-            totaler=data["totaler"],
-            godkendt_antal=sum(1 for r in resultater if r.godkendt),
             kan_eksportere=services.kan_eksportere(koersel),
             historik=koersel.beregninger.select_related("bruger"),
         ),
