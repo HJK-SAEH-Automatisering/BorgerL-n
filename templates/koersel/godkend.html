@@ -5,16 +5,6 @@
 {% block content %}
 <div class="head">
   <h1>Godkend beregning · {{ koersel.navn }}</h1>
-  <span class="sub">Rapport {{ beregning.rapport_id }} · {{ beregning.tidspunkt|date:"d.m.Y H:i" }} · {{ godkendt_antal }} af {{ resultater|length }} godkendt</span>
-</div>
-<p class="sub">Gennemgå, hvordan beløbet er beregnet for hver borger. Intet kan eksporteres, før alle borgere er godkendt.</p>
-
-<div class="tiles">
-  <div class="tile"><div class="l">Borgere</div><div class="v">{{ totaler.antal }}</div></div>
-  <div class="tile"><div class="l">Løn før skat</div><div class="v">{{ totaler.loen_foer|floatformat:"2g" }} kr</div></div>
-  <div class="tile"><div class="l">Løn efter skat</div><div class="v">{{ totaler.loen_efter|floatformat:"2g" }} kr</div></div>
-  <div class="tile"><div class="l">Træk (lønart 991)</div><div class="v">{{ totaler.traek_991|floatformat:"2g" }} kr</div></div>
-  <div class="tile"><div class="l">Udbetaling (lønart 991)</div><div class="v">{{ totaler.udbetaling_991|floatformat:"2g" }} kr</div></div>
 </div>
 
 <div class="actions" style="margin-top:0">

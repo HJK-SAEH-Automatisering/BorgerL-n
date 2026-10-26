@@ -352,6 +352,44 @@ class FlowTests(TestCase):
 
         self.assertEqual(self.client.get(reverse("rapport", args=[b.pk])).status_code, 200)
 
+    def test_godkend_skaermen_har_ikke_rapportlinje_forklaring_eller_totaler(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        b = k.beregninger.get()
+        url = reverse("godkend", args=[k.pk])
+
+        def tjek_fjernet(svar):
+            self.assertEqual(svar.status_code, 200)
+            # Linjen med rapportnummer, tidspunkt og "x af y godkendt"
+            self.assertNotRegex(svar.content.decode(), r"\d+ af \d+ godkendt")
+            self.assertNotContains(svar, f"Rapport {b.rapport_id} ·")
+            # Sætningen under overskriften
+            self.assertNotContains(svar, "Gennemgå, hvordan beløbet er beregnet")
+            # Rækken med totaler
+            self.assertNotContains(svar, 'class="tiles"')
+            self.assertNotContains(svar, 'class="tile"')
+            self.assertNotContains(svar, "Løn efter skat")
+            self.assertNotContains(svar, "Træk (lønart 991)")
+            self.assertNotContains(svar, "Udbetaling (lønart 991)")
+            # Det der bliver
+            self.assertContains(svar, f"Godkend beregning · {k.navn}")
+            self.assertContains(svar, f"Åbn PDF-rapport {b.rapport_id}")
+            self.assertContains(svar, "Beregning pr. borger")
+            self.assertContains(svar, "Tidligere beregninger for måneden")
+            self.assertContains(svar, "Tilbage til undtagelser")
+
+        svar = self.client.get(url)
+        tjek_fjernet(svar)
+        self.assertContains(svar, "Godkend alle")
+        self.assertContains(svar, "Eksport er låst, til alle borgere er godkendt.")
+
+        self.client.post(url, {"handling": "godkend_alle"})
+        svar = self.client.get(url)
+        tjek_fjernet(svar)
+        self.assertContains(svar, "Genåbn til rettelser")
+        self.assertContains(svar, "Eksportér lønudtræk (CSV)")
+        self.assertNotContains(svar, "Eksport er låst")
+
     def test_ny_beregning_ophaever_tidligere_godkendelser(self):
         k = self.opret_og_upload([("Person 1", "44:12")])
         self.undtagelser(k)
