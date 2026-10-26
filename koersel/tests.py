@@ -369,7 +369,7 @@ class FlowTests(TestCase):
             self.assertNotContains(svar, 'class="tiles"')
             self.assertNotContains(svar, 'class="tile"')
             # Etiketterne må ikke stå som tile-etiketter; teksterne står i øvrigt
-            # i beregningsgrundlaget pr. borger, som skal blive.
+            # i beregningsgrundlaget pr. borger, som nu har sin egen side.
             for etiket in ("Borgere", "Løn før skat", "Løn efter skat", "Træk (lønart 991)", "Udbetaling (lønart 991)"):
                 self.assertNotContains(svar, f'<div class="l">{etiket}</div>')
             # Det der bliver
@@ -390,6 +390,81 @@ class FlowTests(TestCase):
         self.assertContains(svar, "Genåbn til rettelser")
         self.assertContains(svar, "Eksportér lønudtræk (CSV)")
         self.assertNotContains(svar, "Eksport er låst")
+
+    def test_godkend_skaermen_har_knap_til_beregningsgrundlag_i_stedet_for_foldet_tabel(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        b = k.beregninger.get()
+        url = reverse("godkend", args=[k.pk])
+
+        def tjek(svar):
+            self.assertEqual(svar.status_code, 200)
+            self.assertNotContains(svar, "Se beregningsgrundlag")
+            self.assertNotContains(svar, "<details")
+            for r in b.resultater.all():
+                self.assertContains(
+                    svar,
+                    f'<a class="btn" href="{reverse("grundlag", args=[k.pk, r.pk])}" target="_blank" rel="noopener">Beregningsgrundlag</a>',
+                    html=False,
+                )
+            self.assertEqual(svar.content.decode().count(">Beregningsgrundlag</a>"), 2)
+
+        tjek(self.client.get(url))
+        self.client.post(url, {"handling": "godkend_alle"})
+        svar = self.client.get(url)
+        tjek(svar)
+        # Knappen står stadig, også når borgeren er godkendt
+        self.assertContains(svar, "Godkendt")
+
+    def test_beregningsgrundlag_viser_borger_og_tabel_uden_cpr_og_adresse(self):
+        self.p1.adresse = "Fiktiv Vej 1, 9000 Testby"
+        self.p1.save()
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        b = k.beregninger.get()
+        r = b.resultater.get(navn="Person 1")
+        svar = self.client.get(reverse("grundlag", args=[k.pk, r.pk]))
+        self.assertEqual(svar.status_code, 200)
+        self.assertContains(svar, "Beregningsgrundlag · Person 1")
+        self.assertContains(svar, "9001")
+        self.assertContains(svar, "44:12")
+        self.assertContains(svar, "Kører selv")
+        for kolonne in ("Nr.", "Trin", "Formel", "Indsat", "Resultat"):
+            self.assertContains(svar, f"<th>{kolonne}</th>" if kolonne != "Resultat" else '<th class="r">Resultat</th>')
+        for trin in r.detaljer["grundlag"]:
+            self.assertContains(svar, trin["titel"])
+            if trin.get("note"):
+                self.assertContains(svar, trin["note"])
+        self.assertNotContains(svar, "000000-0001")
+        self.assertNotContains(svar, "Fiktiv Vej")
+        # Ingen trinsøjle og ingen godkendelsesknap
+        self.assertNotContains(svar, "med-trin")
+        self.assertNotContains(svar, 'name="handling"')
+
+    def test_beregningsgrundlag_giver_ikke_fundet_for_ugyldigt_nummer_eller_fremmed_borger(self):
+        k = self.opret_og_upload([("Person 1", "44:12")])
+        # Ingen beregning endnu
+        self.assertEqual(self.client.get(reverse("grundlag", args=[k.pk, 1])).status_code, 404)
+        self.undtagelser(k)
+        r = k.aktiv_beregning.resultater.get()
+        self.assertEqual(self.client.get(reverse("grundlag", args=[k.pk, r.pk + 999])).status_code, 404)
+        self.assertEqual(self.client.get(reverse("grundlag", args=[k.pk + 999, r.pk])).status_code, 404)
+        # Et resultat fra en tidligere beregning hører ikke til den gældende
+        self.client.post(reverse("godkend", args=[k.pk]), {"handling": "godkend_alle"})
+        self.client.post(reverse("godkend", args=[k.pk]), {"handling": "genaabn"})
+        self.undtagelser(k)
+        self.assertEqual(self.client.get(reverse("grundlag", args=[k.pk, r.pk])).status_code, 404)
+        ny = k.aktiv_beregning.resultater.get()
+        self.assertEqual(self.client.get(reverse("grundlag", args=[k.pk, ny.pk])).status_code, 200)
+
+    def test_beregningsgrundlag_kraever_login(self):
+        k = self.opret_og_upload([("Person 1", "44:12")])
+        self.undtagelser(k)
+        r = k.aktiv_beregning.resultater.get()
+        self.client.logout()
+        svar = self.client.get(reverse("grundlag", args=[k.pk, r.pk]))
+        self.assertEqual(svar.status_code, 302)
+        self.assertIn("/konto/login/", svar["Location"])
 
     def test_ny_beregning_ophaever_tidligere_godkendelser(self):
         k = self.opret_og_upload([("Person 1", "44:12")])

@@ -41,20 +41,9 @@
         <form method="post">{% csrf_token %}<input type="hidden" name="resultat" value="{{ r.pk }}"><input type="hidden" name="handling" value="godkend"><button type="submit">Godkend</button></form>
         {% endif %}
       </span>
+      <span><a class="btn" href="{% url 'grundlag' koersel.pk r.pk %}" target="_blank" rel="noopener">Beregningsgrundlag</a></span>
     </div>
     {% for a in r.detaljer_data.advarsler %}<div style="padding:0 14px 8px"><span class="badge warn">{{ a }}</span></div>{% endfor %}
-    <details>
-      <summary>Se beregningsgrundlag</summary>
-      <table class="t" style="margin-top:8px">
-        <thead><tr><th>Nr.</th><th>Trin</th><th>Formel</th><th>Indsat</th><th class="r">Resultat</th></tr></thead>
-        <tbody>
-          {% for t in r.detaljer_data.grundlag %}
-          <tr><td>{{ t.nr }}</td><td>{{ t.titel }}</td><td>{{ t.formel }}</td><td>{{ t.indsat }}</td><td class="r nowrap">{{ t.resultat }}</td></tr>
-          {% if t.note %}<tr><td></td><td colspan="4" class="mu"><em>{{ t.note }}</em></td></tr>{% endif %}
-          {% endfor %}
-        </tbody>
-      </table>
-    </details>
   </div>
   {% endfor %}
 </div>

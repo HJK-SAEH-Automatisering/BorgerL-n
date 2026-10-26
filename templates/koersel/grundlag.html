@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Beregningsgrundlag · {{ r.navn }}{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>Beregningsgrundlag · {{ r.navn }}</h1>
+</div>
+<p class="mu">{{ koersel.navn }} · Rapport {{ beregning.rapport_id }}</p>
+
+<div class="rows" style="margin-bottom:14px">
+  <div class="row" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr))">
+    <span><span class="mu">Navn</span><br>{{ r.navn }}</span>
+    <span><span class="mu">Tj.nr.</span><br>{{ r.tj_nr|default:"-" }}</span>
+    <span><span class="mu">Afdeling</span><br>{{ r.afdeling|default:"-" }}</span>
+    <span><span class="mu">Timer</span><br>{{ r.timer_tekst }}</span>
+    <span><span class="mu">Transport</span><br>{{ r.transport_navn }}{% if r.detaljer_data.input.zoner %} · {{ r.detaljer_data.input.zoner }} zoner{% endif %}</span>
+  </div>
+</div>
+
+<table class="t">
+  <thead><tr><th>Nr.</th><th>Trin</th><th>Formel</th><th>Indsat</th><th class="r">Resultat</th></tr></thead>
+  <tbody>
+    {% for t in r.detaljer_data.grundlag %}
+    <tr><td>{{ t.nr }}</td><td>{{ t.titel }}</td><td>{{ t.formel }}</td><td>{{ t.indsat }}</td><td class="r nowrap">{{ t.resultat }}</td></tr>
+    {% if t.note %}<tr><td></td><td colspan="4" class="mu"><em>{{ t.note }}</em></td></tr>{% endif %}
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
