@@ -21,6 +21,7 @@ en rapport der har stået her i dagevis, er et fund på vej til at blive glemt.>
 
 | Nr. | Titel | Status | Kilde |
 |---|---|---|---|
+| task-0007 | Skift ordet borger til medarbejder, og navnet BorgerLøn til MedarbejderLøn | planlagt | interview |
 
 <`Status` er `planlagt`, `i-gang` eller `afsluttet`. `Kilde` er `interview`
 eller nummeret på den rapport opgaven kom af.>
@@ -44,6 +45,7 @@ ellers fyldes `docs/tasks/` med halve idéer.>
 | task-0003 | Indlæs .env automatisk i indstillingerne | bygget |
 | task-0004 | Trin som knapper i venstre side og antal dage fra Punchly-filen | bygget |
 | task-0005 | Simplificér Godkend-skærmen | bygget |
+| task-0006 | Beregningsgrundlag som knap og egen side på Godkend-skærmen | bygget |
 
 <`Udfald` er `bygget` eller `afvist`. Flyt hertil når architect har vurderet
 opgaven — ikke når udrulningen er sket; udrulning er ikke en status.

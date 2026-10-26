@@ -23,8 +23,8 @@ Adressen til appen får du af den, der driver den. Hver måned går du fire trin
    fra. Vælger du individuel beregning, står antal fremmødedage udfyldt fra filen, hvis den har
    dem. Du kan rette tallet. Mangler en borger oplysninger, når du trykker "Beregn", rulles siden til den første
    række, der mangler noget.
-4. **Godkend.** Du kan se, hvordan beløbet er regnet ud for hver borger, og godkende en ad
-   gangen eller alle på én gang. Først når alle er godkendt, kan du hente lønudtrækket (CSV).
+4. **Godkend.** Ud for hver borger er der en knap, "Beregningsgrundlag", som åbner en side i en
+   ny fane med udregningen trin for trin. Du kan godkende en ad gangen eller alle på én gang. Først når alle er godkendt, kan du hente lønudtrækket (CSV).
    Skal noget rettes bagefter, genåbner du kørslen.
 
 Hver gang du trykker "Beregn", gemmes en PDF-rapport med udregningen for hver borger, uden
