@@ -18,11 +18,13 @@
     <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link" type="submit">Log ud</button></form>
   </nav>
   {% endif %}
+  <div class="side{% block sideclass %}{% endblock %}">
   {% block stepper %}{% endblock %}
   <main class="wrap {% block wrapclass %}{% endblock %}">
     {% for m in messages %}<div class="flash {{ m.level_tag }}" role="status">{{ m }}</div>{% endfor %}
     {% block content %}{% endblock %}
   </main>
+  </div>
   {% block scripts %}{% endblock %}
 </body>
 </html>

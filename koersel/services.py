@@ -40,6 +40,7 @@ def opret_linjer(koersel: Koersel, raekker: list[Raekke], filnavn: str, bruger=N
                 raekke=r.raekke,
                 fil_navn=r.navn,
                 minutter=r.minutter,
+                fil_dage=r.dage,
                 dobbelt=antal_pr_navn[nøgle] > 1,
             )
             kandidater = borgere_pr_navn.get(nøgle, [])

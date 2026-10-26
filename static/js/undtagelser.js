@@ -28,8 +28,11 @@
       z.disabled = !selv;
       i.disabled = !selv;
       if (!selv) { z.value = ''; i.checked = false; }
+      var varSlaaetFra = d.disabled;
       d.disabled = !(selv && i.checked);
       if (d.disabled) d.value = '';
+      // Når individuel beregning slås til, foreslås dagene fra filen (kan rettes bagefter).
+      else if (varSlaaetFra && d.value === '') d.value = d.dataset.filDage || '';
       var dage = Number(d.value), tekst, klasse;
       if (row.dataset.satsMangler) { tekst = 'Mangler sats'; klasse = 'bad'; }
       else if (!t) { tekst = 'Mangler transport'; klasse = 'warn'; }

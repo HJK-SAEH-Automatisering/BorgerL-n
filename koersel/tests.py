@@ -21,12 +21,14 @@ from .models import Koersel, Linje
 
 
 def xlsx(raekker, header=("Navn", "Total timer (timer:minutter)"), navn="timer.xlsx"):
+    """Rækker er (navn, timer) eller (navn, timer, dage); header med tre felter giver en dagskolonne."""
     wb = Workbook()
     ws = wb.active
-    ws["C4"], ws["D4"] = header
-    for i, (n, t) in enumerate(raekker, start=5):
-        ws.cell(row=i, column=3, value=n)
-        ws.cell(row=i, column=4, value=t)
+    for j, h in enumerate(header):
+        ws.cell(row=4, column=3 + j, value=h)
+    for i, raekke in enumerate(raekker, start=5):
+        for j, v in enumerate(raekke):
+            ws.cell(row=i, column=3 + j, value=v)
     buf = BytesIO()
     wb.save(buf)
     return SimpleUploadedFile(navn, buf.getvalue())
@@ -63,6 +65,40 @@ class ImporterTests(TestCase):
     def test_ugyldigt_tidsformat_peger_paa_raekken(self):
         with self.assertRaisesMessage(ImportFejl, "Række 6 (B)"):
             laes_timefil(xlsx([("A", "1:00"), ("B", "meget")]))
+
+    def test_laeser_antal_arbejdsdage(self):
+        r = laes_timefil(xlsx([("A", "1:00", 17), ("B", "2:00", "5"), ("C", "3:00", 31.0)], header=("Navn", "Total timer", "Antal arbejdsdage")))
+        self.assertEqual([x.dage for x in r], [17, 5, 31])
+
+    def test_laeser_ogsaa_antal_dage(self):
+        r = laes_timefil(xlsx([("A", "1:00", 17), ("B", "2:00", "5")], header=("Navn", "Total timer", "Antal dage")))
+        self.assertEqual([x.dage for x in r], [17, 5])
+
+    def test_dagskolonnen_ses_bort_fra_store_bogstaver_og_mellemrum(self):
+        for overskrift in ("  ANTAL arbejdsdage ", "antal ARBEJDSDAGE", " Antal   Arbejdsdage", "  ANTAL dage ", "antal DAGE"):
+            with self.subTest(overskrift=overskrift):
+                r = laes_timefil(xlsx([("A", "1:00", 4)], header=("Navn", "Total timer", overskrift)))
+                self.assertEqual(r[0].dage, 4)
+
+    def test_dagskolonnen_kan_staa_foer_navn_og_timer(self):
+        r = laes_timefil(xlsx([(8, "A", "1:00")], header=("Antal arbejdsdage", "Navn", "Total timer (timer:minutter)")))
+        self.assertEqual([(x.navn, x.minutter, x.dage) for x in r], [("A", 60, 8)])
+
+    def test_tom_celle_giver_ingen_dage(self):
+        r = laes_timefil(xlsx([("A", "1:00", None), ("B", "2:00", "  "), ("C", "3:00", 9)], header=("Navn", "Total timer", "Antal dage")))
+        self.assertEqual([x.dage for x in r], [None, None, 9])
+
+    def test_manglende_dagskolonne_giver_ingen_dage_og_ingen_fejl(self):
+        r = laes_timefil(xlsx([("A", "1:00"), ("B", "2:00")]))
+        self.assertEqual([(x.minutter, x.dage) for x in r], [(60, None), (120, None)])
+
+    def test_ugyldige_dage_afviser_hele_filen_med_raekke_og_vaerdi(self):
+        for overskrift in ("Antal arbejdsdage", "Antal dage"):
+            for ugyldig in (0, 32, -1, 2.5, "mange", "4,5", True):
+                with self.subTest(overskrift=overskrift, ugyldig=ugyldig):
+                    header = ("Navn", "Total timer", overskrift)
+                    with self.assertRaisesMessage(ImportFejl, f"Række 6 (B): '{ugyldig}' i kolonnen '{overskrift}' er ikke et gyldigt antal dage"):
+                        laes_timefil(xlsx([("A", "1:00", 3), ("B", "2:00", ugyldig)], header=header))
 
 
 TEST_MEDIA = tempfile.mkdtemp(prefix="borgerlon-test-")
@@ -155,6 +191,73 @@ class FlowTests(TestCase):
     def test_uden_upload_staar_der_ingen_fil_valgt(self):
         k = Koersel.objects.create(maaned=date(2026, 9, 1))
         self.assertContains(self.client.get(reverse("upload", args=[k.pk])), "Ingen fil valgt")
+
+    def upload_med_dage(self, raekker):
+        self.client.post(reverse("dashboard"), {"maaned": "2026-10"})
+        k = Koersel.objects.get()
+        fil = xlsx(raekker, header=("Navn", "Total timer", "Antal arbejdsdage"), navn="punchly.xlsx")
+        self.assertRedirects(self.client.post(reverse("upload", args=[k.pk]), {"fil": fil}), reverse("gennemse", args=[k.pk]))
+        return k
+
+    def test_upload_gemmer_dage_fra_filen_men_bruger_dem_ikke_endnu(self):
+        k = self.upload_med_dage([("Person 1", "44:12", 17), ("Person 2", "10:00", None)])
+        self.assertEqual({l.fil_navn: (l.fil_dage, l.dage) for l in k.linjer.all()}, {"Person 1": (17, None), "Person 2": (None, None)})
+
+    def test_upload_beskriver_antal_dage_som_valgfri_kolonne(self):
+        k = Koersel.objects.create(maaned=date(2026, 9, 1))
+        self.assertContains(self.client.get(reverse("upload", args=[k.pk])), 'Kolonnen "Antal arbejdsdage"')
+
+    def test_undtagelser_forudfylder_dage_kun_ved_individuel_beregning(self):
+        k = self.upload_med_dage([("Person 1", "44:12", 17), ("Person 3", "10:00", 8)])
+        svar = self.client.get(reverse("undtagelser", args=[k.pk]))
+        l1 = k.linjer.get(fil_navn="Person 1")
+        self.assertContains(svar, f'name="d_{l1.pk}" data-felt="d" data-fil-dage="17" placeholder="Dage" aria-label="Fremmødedage for Person 1" value=""')
+        l1.individuel = True
+        l1.save()
+        svar = self.client.get(reverse("undtagelser", args=[k.pk]))
+        self.assertContains(svar, f'name="d_{l1.pk}" data-felt="d" data-fil-dage="17" placeholder="Dage" aria-label="Fremmødedage for Person 1" value="17"')
+
+    def test_undtagelser_uden_dage_i_filen_er_feltet_tomt(self):
+        k = self.upload_med_dage([("Person 1", "44:12", None)])
+        l = k.linjer.get()
+        l.individuel = True
+        l.save()
+        svar = self.client.get(reverse("undtagelser", args=[k.pk]))
+        self.assertContains(svar, 'data-fil-dage="" placeholder="Dage" aria-label="Fremmødedage for Person 1" value=""')
+
+    def test_rettede_dage_vinder_over_filens(self):
+        k = self.upload_med_dage([("Person 1", "44:12", 17)])
+        l = k.linjer.get()
+        self.undtagelser(k, handling="gem", **{f"i_{l.pk}": "on", f"d_{l.pk}": "12"})
+        svar = self.client.get(reverse("undtagelser", args=[k.pk]))
+        self.assertContains(svar, 'data-fil-dage="17" placeholder="Dage" aria-label="Fremmødedage for Person 1" value="12"')
+
+    def test_filens_dage_overlever_gem_uden_individuel_og_manuel_afklaring(self):
+        k = self.upload_med_dage([("Person 1", "44:12", 17), ("Ukendt", "5:00", 9)])
+        ukendt = k.linjer.get(fil_navn="Ukendt")
+        self.client.post(reverse("gennemse", args=[k.pk]), {"handling": "afklar", "linje": ukendt.pk, "borger": self.p1.pk})
+        ukendt.refresh_from_db()
+        self.assertEqual((ukendt.borger, ukendt.fil_dage, ukendt.dage), (self.p1, 9, None))
+        self.undtagelser(k, handling="gem", **{f"i_{ukendt.pk}": "on", f"d_{ukendt.pk}": "5"})
+        ukendt.refresh_from_db()
+        self.assertEqual((ukendt.individuel, ukendt.dage, ukendt.fil_dage), (True, 5, 9))
+        data = {"handling": "gem", **{f"t_{l.pk}": l.transport for l in k.linjer.all()}, **{f"z_{l.pk}": l.zoner or "" for l in k.linjer.all()}}
+        self.client.post(reverse("undtagelser", args=[k.pk]), data)
+        ukendt.refresh_from_db()
+        self.assertEqual((ukendt.individuel, ukendt.dage, ukendt.fil_dage), (False, None, 9))
+        self.assertEqual(k.linjer.get(fil_navn="Person 1").fil_dage, 17)
+
+    def test_beregning_bruger_dage_kun_ved_individuel_beregning(self):
+        Borger.objects.create(navn="Person 4", tj_nr="9004", cpr="000000-0004", sats=Decimal("20"), afstand_km=Decimal("3.2"), transport="selv", zoner=2)
+        k = self.upload_med_dage([("Person 1", "44:12", 17), ("Person 4", "10:00", 20)])
+        self.assertEqual(self.undtagelser(k, handling="gem").status_code, 302)
+        for l in k.linjer.all():
+            self.assertIsNone(l.dage)
+        p1, p4 = k.linjer.get(fil_navn="Person 1"), k.linjer.get(fil_navn="Person 4")
+        self.undtagelser(k, handling="beregn", **{f"i_{p1.pk}": "on", f"d_{p1.pk}": "17", f"d_{p4.pk}": "20"})
+        linjer = {x["navn"]: x["input"] for x in k.aktiv_beregning.data["linjer"]}
+        self.assertEqual((linjer["Person 1"]["individuel"], linjer["Person 1"]["dage"]), (True, 17))
+        self.assertEqual((linjer["Person 4"]["individuel"], linjer["Person 4"]["dage"]), (False, None))
 
     def test_flertydigt_navn_afklares_aldrig_automatisk(self):
         Borger.objects.create(navn="Person 1", tj_nr="9101")

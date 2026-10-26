@@ -5,6 +5,7 @@ from datetime import datetime, time, timedelta
 from openpyxl import load_workbook
 
 TID = re.compile(r"^\s*(\d+):(\d{2})(?::\d{2})?\s*$")
+DAGE_KOLONNER = ("antal arbejdsdage", "antal dage")
 
 
 class ImportFejl(Exception):
@@ -16,6 +17,7 @@ class Raekke:
     raekke: int
     navn: str
     minutter: int
+    dage: int | None = None
 
 
 def _til_minutter(v) -> int | None:
@@ -37,8 +39,25 @@ def _til_minutter(v) -> int | None:
     raise ValueError
 
 
+def _til_dage(v) -> int | None:
+    if v is None or (isinstance(v, str) and not v.strip()):
+        return None
+    if isinstance(v, str):
+        v = v.strip()
+        if not v.isascii() or not v.isdigit():
+            raise ValueError
+        v = int(v)
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    if isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= 31:
+        raise ValueError
+    return v
+
+
 def laes_timefil(fil) -> list[Raekke]:
-    """Læser en Excel-fil fra Punchly med kolonnerne 'Navn' og 'Total timer (timer:minutter)'."""
+    """Læser en Excel-fil fra Punchly med kolonnerne 'Navn' og 'Total timer (timer:minutter)'.
+
+    Kolonnen 'Antal arbejdsdage' eller 'Antal dage' (fremmødedage i måneden) er valgfri."""
     navn_fil = getattr(fil, "name", "")
     if not navn_fil.lower().endswith(".xlsx"):
         raise ImportFejl("Filen skal være en Excel-fil i formatet .xlsx.")
@@ -48,13 +67,17 @@ def laes_timefil(fil) -> list[Raekke]:
     except Exception:
         raise ImportFejl("Filen kan ikke læses som en Excel-fil (.xlsx). Den kan være beskadiget.")
 
-    navn_kol = tid_kol = header_raekke = None
+    navn_kol = tid_kol = dage_kol = header_raekke = None
+    dage_navn = ""
     for i, raekke in enumerate(raekker[:50]):
-        tekster = [str(c).strip().casefold() if c is not None else "" for c in raekke]
+        tekster = [" ".join(str(c).split()).casefold() if c is not None else "" for c in raekke]
         if "navn" in tekster:
             for j, t in enumerate(tekster):
                 if t.startswith("total timer") or t == "timer":
                     navn_kol, tid_kol, header_raekke = tekster.index("navn"), j, i
+                    dage_kol = next((k for k, t in enumerate(tekster) if t in DAGE_KOLONNER), None)
+                    if dage_kol is not None:
+                        dage_navn = " ".join(str(raekke[dage_kol]).split())
                     break
         if header_raekke is not None:
             break
@@ -79,7 +102,13 @@ def laes_timefil(fil) -> list[Raekke]:
         if minutter is None:
             problemer.append(f"Række {i} ({navn}): timer mangler.")
             continue
-        fundet.append(Raekke(i, navn, minutter))
+        dage_vaerdi = raekke[dage_kol] if dage_kol is not None and dage_kol < len(raekke) else None
+        try:
+            dage = _til_dage(dage_vaerdi)
+        except ValueError:
+            problemer.append(f"Række {i} ({navn}): '{dage_vaerdi}' i kolonnen '{dage_navn}' er ikke et gyldigt antal dage (helt tal fra 1 til 31).")
+            continue
+        fundet.append(Raekke(i, navn, minutter, dage))
 
     if problemer:
         mere = f" (og {len(problemer) - 5} flere)" if len(problemer) > 5 else ""

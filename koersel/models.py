@@ -62,6 +62,7 @@ class Linje(models.Model):
     zoner = models.PositiveSmallIntegerField(null=True, blank=True)
     individuel = models.BooleanField(default=False)
     dage = models.PositiveSmallIntegerField(null=True, blank=True)
+    fil_dage = models.PositiveSmallIntegerField("Antal dage i filen", null=True, blank=True, help_text="Forslag fra Punchly-filen til dage ved individuel beregning")
 
     class Meta:
         ordering = ["raekke"]
