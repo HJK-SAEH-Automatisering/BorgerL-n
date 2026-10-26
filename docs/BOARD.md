@@ -50,6 +50,7 @@ ellers fyldes `docs/tasks/` med halve idéer.>
 | task-0009 | Placér knappen Beregningsgrundlag ved siden af Godkend | bygget |
 | task-0010 | Fjern knappen Tilbage til undtagelser på Godkend-skærmen | bygget |
 | task-0011 | Få browseren til at hente nyt stylesheet og ny skærmkode, når de ændres | bygget |
+| task-0012 | Rækkerne på Godkend-skærmen skifter ikke plads, når nogle er godkendt | bygget |
 
 <`Udfald` er `bygget` eller `afvist`. Flyt hertil når architect har vurderet
 opgaven — ikke når udrulningen er sket; udrulning er ikke en status.
