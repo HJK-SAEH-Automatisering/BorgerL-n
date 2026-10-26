@@ -1,19 +1,24 @@
 import hashlib
+import re
 import shutil
 import tempfile
 from datetime import date, time, timedelta
 from decimal import Decimal
+from html.parser import HTMLParser
 from io import BytesIO
+from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from openpyxl import Workbook
+from reportlab import rl_config
 
 from audit.models import AuditLog
-from beregning.pdf import lav_rapport
+from beregning.pdf import LAYOUT_VERSION, lav_rapport
 from register.models import Borger
 
 from .importer import ImportFejl, laes_timefil
@@ -32,6 +37,36 @@ def xlsx(raekker, header=("Navn", "Total timer (timer:minutter)"), navn="timer.x
     buf = BytesIO()
     wb.save(buf)
     return SimpleUploadedFile(navn, buf.getvalue())
+
+
+class _SynligTekst(HTMLParser):
+    """Samler det en bruger kan læse i en side: tekst og de attributter, der vises eller læses op."""
+
+    SYNLIGE = ("aria-label", "placeholder", "title", "alt")
+
+    def __init__(self):
+        super().__init__()
+        self.dele = []
+        self._skjult = 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ("script", "style"):
+            self._skjult += 1
+        self.dele.extend(v for k, v in attrs if k in self.SYNLIGE and v)
+
+    def handle_endtag(self, tag):
+        if tag in ("script", "style") and self._skjult:
+            self._skjult -= 1
+
+    def handle_data(self, data):
+        if not self._skjult:
+            self.dele.append(data)
+
+
+def synlig_tekst(html: str) -> str:
+    p = _SynligTekst()
+    p.feed(html)
+    return " ".join(p.dele)
 
 
 class ImporterTests(TestCase):
@@ -282,7 +317,7 @@ class FlowTests(TestCase):
         self.client.post(reverse("gennemse", args=[k.pk]), {"handling": "gem", f"afstand_{l.pk}": "7,5", f"transport_{l.pk}": "ingen"})
         self.p2.refresh_from_db()
         self.assertEqual((self.p2.afstand_km, self.p2.transport), (Decimal("7.5"), "ingen"))
-        self.assertTrue(AuditLog.objects.filter(handling="Ændrede borger fra gennemsyn").exists())
+        self.assertTrue(AuditLog.objects.filter(handling="Ændrede medarbejder fra gennemsyn").exists())
 
     def test_beregn_afvises_naar_zone_mangler(self):
         k = self.opret_og_upload([("Person 3", "44:12")])
@@ -303,7 +338,7 @@ class FlowTests(TestCase):
         self.assertLess(html.index("Person 1"), markeret)
         self.assertLess(markeret, html.index("Person 3"))
         self.assertLess(markeret, html.index("Person 4"))
-        self.assertContains(svar, "Beregningen blev ikke kørt, fordi nogle borgere mangler oplysninger.")
+        self.assertContains(svar, "Beregningen blev ikke kørt, fordi nogle medarbejdere mangler oplysninger.")
         self.assertContains(svar, "1 af 3 klar")
 
     def test_undtagelser_uden_afvisning_har_ingen_markering(self):
@@ -369,20 +404,20 @@ class FlowTests(TestCase):
             self.assertNotContains(svar, 'class="tiles"')
             self.assertNotContains(svar, 'class="tile"')
             # Etiketterne må ikke stå som tile-etiketter; teksterne står i øvrigt
-            # i beregningsgrundlaget pr. borger, som nu har sin egen side.
-            for etiket in ("Borgere", "Løn før skat", "Løn efter skat", "Træk (lønart 991)", "Udbetaling (lønart 991)"):
+            # i beregningsgrundlaget pr. medarbejder, som nu har sin egen side.
+            for etiket in ("Medarbejdere", "Løn før skat", "Løn efter skat", "Træk (lønart 991)", "Udbetaling (lønart 991)"):
                 self.assertNotContains(svar, f'<div class="l">{etiket}</div>')
             # Det der bliver
             self.assertContains(svar, f"Godkend beregning · {k.navn}")
             self.assertContains(svar, f"Åbn PDF-rapport {b.rapport_id}")
-            self.assertContains(svar, "Beregning pr. borger")
+            self.assertContains(svar, "Beregning pr. medarbejder")
             self.assertContains(svar, "Tidligere beregninger for måneden")
             self.assertContains(svar, "Tilbage til undtagelser")
 
         svar = self.client.get(url)
         tjek_fjernet(svar)
         self.assertContains(svar, "Godkend alle")
-        self.assertContains(svar, "Eksport er låst, til alle borgere er godkendt.")
+        self.assertContains(svar, "Eksport er låst, til alle medarbejdere er godkendt.")
 
         self.client.post(url, {"handling": "godkend_alle"})
         svar = self.client.get(url)
@@ -480,6 +515,129 @@ class FlowTests(TestCase):
         self.assertEqual(k.status, Koersel.Status.BEREGNET)
         self.assertEqual(self.client.get(reverse("eksport", args=[k.pk])).status_code, 302)
         self.assertTrue(k.beregninger.get(nummer=1).pdf)
+
+    def test_ingen_skaerm_indeholder_ordet_borger(self):
+        def tjek(svar, hvad):
+            self.assertEqual(svar.status_code, 200, hvad)
+            self.assertNotIn("borger", synlig_tekst(svar.content.decode()).lower(), hvad)
+
+        # Loginsiden ses uden at være logget ind
+        self.client.logout()
+        svar = self.client.get(reverse("login"))
+        tjek(svar, "login")
+        self.assertContains(svar, "MedarbejderLøn")
+        self.client.force_login(self.bruger)
+
+        # Én uden sats giver en advarsel på undtagelser; én ukendt giver afklaring på gennemse
+        Borger.objects.create(navn="Person 4", tj_nr="9004", cpr="000000-0004", afstand_km=Decimal("3.2"), transport="selv", zoner=2)
+        tjek(self.client.get(reverse("dashboard")), "forside")
+        tjek(self.client.get(reverse("borger_liste")), "medarbejderliste")
+        tjek(self.client.get(reverse("borger_liste"), {"q": "findes-ikke"}), "tom medarbejderliste")
+        tjek(self.client.get(reverse("borger_ny")), "ny medarbejder")
+        tjek(self.client.get(reverse("borger_ret", args=[self.p1.pk])), "ret medarbejder")
+        svar = self.client.post(reverse("borger_ny"), {"navn": "Person 20", "afstand_km": "1", "traek_procent": "40"}, follow=True)
+        tjek(svar, "meddelelse efter oprettelse")
+        self.assertContains(svar, "Person 20 er oprettet.")
+
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 4", "10:00"), ("Ukendt", "5:00")])
+        tjek(self.client.get(reverse("upload", args=[k.pk])), "upload")
+        ukendt = k.linjer.get(fil_navn="Ukendt")
+        tjek(self.client.get(reverse("gennemse", args=[k.pk])), "gennemse med uafklaret række")
+        tjek(self.client.get(reverse("borger_ny"), {"linje": ukendt.pk, "navn": "Ukendt"}), "ny medarbejder fra række")
+        svar = self.client.post(reverse("gennemse", args=[k.pk]), {"handling": "afklar", "linje": ukendt.pk, "borger": "999999"}, follow=True)
+        tjek(svar, "afklar med ukendt medarbejder")
+        self.assertContains(svar, "Vælg en medarbejder i listen.")
+        self.client.post(reverse("gennemse", args=[k.pk]), {"handling": "afklar", "linje": ukendt.pk, "borger": self.p2.pk})
+        gem = {"handling": "gem"}
+        for l in k.linjer.select_related("borger"):
+            gem.update({f"afstand_{l.pk}": "7,5" if l == ukendt else str(l.borger.afstand_km), f"transport_{l.pk}": "ingen" if l == ukendt else l.borger.transport})
+        svar = self.client.post(reverse("gennemse", args=[k.pk]), gem, follow=True)
+        tjek(svar, "gem på gennemse")
+        self.assertContains(svar, "Ændringerne er gemt i medarbejderregistret.")
+        tjek(self.client.get(reverse("gennemse", args=[k.pk])), "gennemse")
+
+        svar = self.undtagelser(k)
+        tjek(svar, "undtagelser afvist")
+        self.assertContains(svar, "Beregningen blev ikke kørt, fordi nogle medarbejdere mangler oplysninger.")
+        self.assertContains(svar, "Sats pr. time mangler på medarbejderen.")
+        tjek(self.client.get(reverse("undtagelser", args=[k.pk])), "undtagelser")
+
+        p4 = Borger.objects.get(navn="Person 4")
+        p4.sats = Decimal("20")
+        p4.save()
+        svar = self.client.get(self.undtagelser(k)["Location"], follow=True)
+        tjek(svar, "godkend efter beregning")
+        b = k.beregninger.get()
+        resultat = b.resultater.get(navn="Person 1")
+        tjek(self.client.get(reverse("grundlag", args=[k.pk, resultat.pk])), "beregningsgrundlag")
+        tjek(self.client.get(reverse("godkend", args=[k.pk])), "godkend")
+        self.assertNotIn("borger", b.snapshot.lower())
+
+        svar = self.client.post(reverse("godkend", args=[k.pk]), {"handling": "godkend", "resultat": resultat.pk}, follow=True)
+        tjek(svar, "godkend en")
+        self.assertContains(svar, "1 medarbejder(e) godkendt.")
+        svar = self.client.get(reverse("eksport", args=[k.pk]), follow=True)
+        tjek(svar, "eksport spærret")
+        self.assertContains(svar, "Lønudtrækket kan først eksporteres, når alle medarbejdere er godkendt.")
+        tjek(self.client.post(reverse("godkend", args=[k.pk]), {"handling": "godkend_alle"}, follow=True), "godkend alle")
+        csv_tekst = self.client.get(reverse("eksport", args=[k.pk])).content.decode("utf-8-sig")
+        self.assertNotIn("borger", csv_tekst.lower())
+
+        # Administrationen
+        admin = get_user_model().objects.create_superuser("admin", password="x-test-adgangskode-4")
+        self.client.force_login(admin)
+        tjek(self.client.get(reverse("admin:index")), "administration forside")
+        tjek(self.client.get(reverse("admin:app_list", args=["register"])), "administration register")
+        tjek(self.client.get(reverse("admin:register_borger_changelist")), "administration medarbejdere")
+        tjek(self.client.get(reverse("admin:register_borger_add")), "administration ny medarbejder")
+        tjek(self.client.get(reverse("admin:register_borger_change", args=[self.p1.pk])), "administration ret medarbejder")
+        self.assertContains(self.client.get(reverse("admin:register_borger_changelist")), "Medarbejdere")
+
+        # Skærmkoden
+        with open(settings.BASE_DIR / "static" / "js" / "undtagelser.js", encoding="utf-8") as f:
+            self.assertNotIn("borger", f.read().lower())
+
+    def test_auditloggen_viser_objekttypen_medarbejder(self):
+        # Gamle poster har klassenavnet Borger som data og en gammel handlingstekst; kun visningen skal vise det nye ord
+        AuditLog.objects.create(bruger=self.bruger, handling="Oprettede borger", objekt_type="Borger", objekt_id=str(self.p1.pk), detaljer="Person 1")
+        AuditLog.objects.create(bruger=self.bruger, handling="Kørte beregning", objekt_type="Koersel", objekt_id="1", detaljer="Person 2")
+        admin = get_user_model().objects.create_superuser("admin", password="x-test-adgangskode-4")
+        self.client.force_login(admin)
+        url = reverse("admin:audit_auditlog_changelist")
+
+        svar = self.client.get(url)
+        self.assertEqual(svar.status_code, 200)
+        html = svar.content.decode()
+        kolonne = re.findall(r'<td class="field-objekt_type_visning">(.*?)</td>', html)
+        self.assertEqual(sorted(kolonne), ["Koersel", "Medarbejder"])
+        # Filteret viser det nye ord, men filtrerer stadig på den gemte værdi
+        filter_links = dict(re.findall(r'<a href="\?objekt_type=([^"&]*)[^"]*"[^>]*>\s*(.*?)\s*</a>', html))
+        self.assertEqual(filter_links, {"Borger": "Medarbejder", "Koersel": "Koersel"})
+        self.assertNotIn(">Borger<", html)
+
+        svar = self.client.get(url, {"objekt_type": "Borger"})
+        self.assertEqual(svar.context["cl"].result_count, 1)
+        self.assertEqual(svar.context["cl"].result_list[0].objekt_type, "Borger")
+
+        # Søgning virker uændret
+        svar = self.client.get(url, {"q": "Person 2"})
+        self.assertEqual([p.objekt_type for p in svar.context["cl"].result_list], ["Koersel"])
+
+        # De gemte data er uændrede
+        self.assertTrue(AuditLog.objects.filter(objekt_type="Borger", handling="Oprettede borger").exists())
+
+    def test_rapporten_bruger_ordet_medarbejder(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        b = k.beregninger.get()
+        self.assertEqual(b.data["rapport_layout"], LAYOUT_VERSION)
+        self.assertEqual(LAYOUT_VERSION, 2)
+        # Uden komprimering og ASCII85 kan teksten i PDF-filen læses direkte
+        with mock.patch.object(rl_config, "pageCompression", 0), mock.patch.object(rl_config, "useA85", 0):
+            pdf = lav_rapport(b.data).decode("latin-1").lower()
+        self.assertIn("antal medarbejdere", pdf)
+        self.assertIn("hver medarbejder", pdf)
+        self.assertNotIn("borger", pdf)
 
     def test_kraever_login(self):
         self.client.logout()

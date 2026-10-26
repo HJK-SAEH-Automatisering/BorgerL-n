@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}BorgerLøn{% endblock %} · BorgerLøn</title>
+  <title>{% block title %}MedarbejderLøn{% endblock %} · MedarbejderLøn</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
 <body>
   {% if user.is_authenticated %}
   <nav class="topbar">
-    <span class="brand">BorgerLøn · Løn og kørsel</span>
+    <span class="brand">MedarbejderLøn · Løn og kørsel</span>
     <a href="{% url 'dashboard' %}">Kørsler</a>
-    <a href="{% url 'borger_liste' %}">Borgere</a>
+    <a href="{% url 'borger_liste' %}">Medarbejdere</a>
     {% if user.is_staff %}<a href="{% url 'admin:index' %}">Stamdata og log</a>{% endif %}
     <span class="spacer"></span>
     <span>{{ user.get_username }}</span>

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}{% if ny %}Opret borger{% else %}Ret {{ borger.navn }}{% endif %}{% endblock %}
+{% block title %}{% if ny %}Opret medarbejder{% else %}Ret {{ borger.navn }}{% endif %}{% endblock %}
 {% block wrapclass %}smal{% endblock %}
 {% block content %}
-<h1>{% if ny %}Opret borger{% else %}Ret borger{% endif %}</h1>
-{% if linje %}<p class="sub">Borgeren knyttes til rækken «{{ linje.fil_navn }}» fra Punchly-filen.</p>{% endif %}
+<h1>{% if ny %}Opret medarbejder{% else %}Ret medarbejder{% endif %}</h1>
+{% if linje %}<p class="sub">Medarbejderen knyttes til rækken «{{ linje.fil_navn }}» fra Punchly-filen.</p>{% endif %}
 <form method="post" class="card pad">
   {% csrf_token %}
   {{ form.non_field_errors }}

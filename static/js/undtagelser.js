@@ -53,7 +53,7 @@
     if (mangler > 0) {
       e.preventDefault();
       msg.className = 'msg bad';
-      msg.textContent = mangler + (mangler === 1 ? ' borger mangler' : ' borgere mangler') + ' oplysninger, før du kan beregne';
+      msg.textContent = mangler + (mangler === 1 ? ' medarbejder mangler' : ' medarbejdere mangler') + ' oplysninger, før du kan beregne';
       visFoersteManglende();
     }
   });

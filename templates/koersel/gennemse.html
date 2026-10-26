@@ -5,24 +5,24 @@
 {% block sideclass %} med-trin{% endblock %}
 {% block content %}
 <div class="head">
-  <h1>Gennemse borgernes transport · {{ koersel.navn }}</h1>
+  <h1>Gennemse medarbejdernes transport · {{ koersel.navn }}</h1>
   <span class="sub">{{ koersel.filnavn }} · {{ linjer|length }} rækker</span>
 </div>
-<p class="sub">Sådan er transport og afstand registreret for borgerne i filen. Vil du ændre noget? Ændringer her gemmes i borgerregisteret.</p>
+<p class="sub">Sådan er transport og afstand registreret for medarbejderne i filen. Vil du ændre noget? Ændringer her gemmes i medarbejderregisteret.</p>
 
 {% for l in uafklarede %}
 <div class="alertbox">
-  <p><strong>{{ l.fil_navn }}</strong> ({{ l.timer_tekst }} timer) {% if l.match_status == 'flertydig' %}matcher flere borgere i registret{% else %}kunne ikke matches på navn{% endif %}.</p>
+  <p><strong>{{ l.fil_navn }}</strong> ({{ l.timer_tekst }} timer) {% if l.match_status == 'flertydig' %}matcher flere medarbejdere i registret{% else %}kunne ikke matches på navn{% endif %}.</p>
   <form method="post" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     {% csrf_token %}
     <input type="hidden" name="handling" value="afklar">
     <input type="hidden" name="linje" value="{{ l.pk }}">
-    <select name="borger" aria-label="Vælg borger til {{ l.fil_navn }}" style="min-width:240px">
-      <option value="">Vælg borger i registret</option>
+    <select name="borger" aria-label="Vælg medarbejder til {{ l.fil_navn }}" style="min-width:240px">
+      <option value="">Vælg medarbejder i registret</option>
       {% for b in l.valgmuligheder %}<option value="{{ b.pk }}">{{ b.navn }}{% if b.tj_nr %} (Tj.nr. {{ b.tj_nr }}){% endif %}</option>{% endfor %}
     </select>
     <button type="submit">Bekræft match</button>
-    <a class="btn" href="{% url 'borger_ny' %}?linje={{ l.pk }}&navn={{ l.fil_navn|urlencode }}">Opret ny borger</a>
+    <a class="btn" href="{% url 'borger_ny' %}?linje={{ l.pk }}&navn={{ l.fil_navn|urlencode }}">Opret ny medarbejder</a>
   </form>
 </div>
 {% endfor %}
@@ -30,7 +30,7 @@
 <form method="post">
   {% csrf_token %}
   <div class="rows">
-    <div class="row head-row g2"><span>Borger</span><span>Afstand</span><span>Transport</span></div>
+    <div class="row head-row g2"><span>Medarbejder</span><span>Afstand</span><span>Transport</span></div>
     {% for l in linjer %}
     <div class="row g2">
       <div>

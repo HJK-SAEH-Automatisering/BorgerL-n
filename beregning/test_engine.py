@@ -96,7 +96,7 @@ class ValideringTests(TestCase):
 
     def test_manglende_sats(self):
         r = beregn(inp(sats=None), PAR, ZONER)
-        self.assertIn("Sats pr. time mangler på borgeren.", r.fejl)
+        self.assertIn("Sats pr. time mangler på medarbejderen.", r.fejl)
 
 
 class AdvarselTests(TestCase):

@@ -35,7 +35,7 @@ DAGE = {
 
 
 class Command(BaseCommand):
-    help = "Opretter fiktive demodata (ingen rigtige borgere), en demobruger og en eksempelfil i stil med Punchly-eksporten."
+    help = "Opretter fiktive demodata (ingen rigtige medarbejdere), en demobruger og en eksempelfil i stil med Punchly-eksporten."
 
     def add_arguments(self, parser):
         parser.add_argument("--bruger", default="demo", help="Brugernavn til demobrugeren")
