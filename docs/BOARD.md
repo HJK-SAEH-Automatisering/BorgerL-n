@@ -43,6 +43,7 @@ ellers fyldes `docs/tasks/` med halve idéer.>
 | task-0002 | Tydeligere kørselsskærme: sidst uploadet og første manglende række | bygget |
 | task-0003 | Indlæs .env automatisk i indstillingerne | bygget |
 | task-0004 | Trin som knapper i venstre side og antal dage fra Punchly-filen | bygget |
+| task-0005 | Simplificér Godkend-skærmen | bygget |
 
 <`Udfald` er `bygget` eller `afvist`. Flyt hertil når architect har vurderet
 opgaven — ikke når udrulningen er sket; udrulning er ikke en status.
