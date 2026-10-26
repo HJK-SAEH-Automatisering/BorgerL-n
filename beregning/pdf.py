@@ -1,7 +1,7 @@
 """Genererer PDF-rapporten for en beregningskørsel ud fra et snapshot (dict).
 
 Rapporten bygges udelukkende af snapshotten, så den kan genskabes identisk senere.
-CPR og adresse indgår bevidst ikke; borgere identificeres med navn og Tj.nr.
+CPR og adresse indgår bevidst ikke; medarbejdere identificeres med navn og Tj.nr.
 """
 
 from decimal import Decimal
@@ -16,9 +16,9 @@ from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Space
 
 from .engine import TRANSPORT_NAVNE, hhmm, kr, tal
 
-LAYOUT_VERSION = 1  # skal øges, når rapportens layout ændres
+LAYOUT_VERSION = 2  # skal øges, når rapportens layout ændres
 
-KILDE_TEKST = {"fil": "Punchly-filen", "register": "Borgerregistret", "manuelt": "Rettet i denne kørsel", "-": "-"}
+KILDE_TEKST = {"fil": "Punchly-filen", "register": "Medarbejderregistret", "manuelt": "Rettet i denne kørsel", "-": "-"}
 
 _styles = getSampleStyleSheet()
 H1 = ParagraphStyle("h1", parent=_styles["Heading1"], fontSize=18, spaceAfter=6)
@@ -132,14 +132,14 @@ def lav_rapport(d: dict) -> bytes:
         topMargin=18 * mm,
         bottomMargin=18 * mm,
         title=f"Beregningsrapport {d['rapport_id']}",
-        author="BorgerLøn",
+        author="MedarbejderLøn",
         invariant=1,
     )
     t, par = d["totaler"], d["parametre"]
     ind = [
         Paragraph(f"Beregningsrapport - løn og kørsel, {escape(d['maaned_tekst'])}", H1),
         Paragraph(
-            "Rapporten specificerer, hvordan løn og befordring er beregnet for hver borger. "
+            "Rapporten specificerer, hvordan løn og befordring er beregnet for hver medarbejder. "
             "Den er oprettet automatisk ved beregningen og kan ikke ændres bagefter.",
             TXT,
         ),
@@ -150,7 +150,7 @@ def lav_rapport(d: dict) -> bytes:
                 [_p("Beregnet"), _p(d["tidspunkt_tekst"])],
                 [_p("Kørt af"), _p(d["bruger"])],
                 [_p("Timefil fra Punchly"), _p(d["filnavn"] or "-")],
-                [_p("Antal borgere"), _p(t["antal"])],
+                [_p("Antal medarbejdere"), _p(t["antal"])],
                 [_p("Sum løn før skat"), _p(f"{kr(Decimal(t['loen_foer']))} kr")],
                 [_p("Sum løn efter skat"), _p(f"{kr(Decimal(t['loen_efter']))} kr")],
                 [_p("Sum træk (lønart 991)"), _p(f"{kr(Decimal(t['traek_991']))} kr")],

@@ -94,7 +94,7 @@ def valider(inp: Input, zonepriser: dict[int, Zonepris]) -> list[str]:
     if inp.minutter is None or inp.minutter < 0:
         fejl.append("Timer mangler eller er ugyldige.")
     if inp.sats is None or inp.sats <= 0:
-        fejl.append("Sats pr. time mangler på borgeren.")
+        fejl.append("Sats pr. time mangler på medarbejderen.")
     if inp.transport not in TRANSPORT_NAVNE:
         fejl.append("Transport mangler.")
         return fejl
@@ -162,11 +162,11 @@ def beregn(inp: Input, par: Parametre, zonepriser: dict[int, Zonepris]) -> Resul
     res.egenbetaling = min(maks_andel, par.grundtakst)
     _trin(
         res,
-        "Borgerens egenbetaling for transport",
+        "Medarbejderens egenbetaling for transport",
         f"mindste af {tal(par.max_egenbetaling_procent, 0)} % af løn efter skat og grundtakst for {par.grundtakst_zoner} zoner",
         f"min({kr(res.loen_efter)} kr x {tal(par.max_egenbetaling_procent, 0)} % = {kr(maks_andel)} kr ; grundtakst {kr(par.grundtakst)} kr)",
         f"{kr(res.egenbetaling)} kr",
-        "Borgeren betaler selv inden for 10 km / 2 zoner, dog aldrig mere end 30 % af løn efter skat (§105 SEL).",
+        "Medarbejderen betaler selv inden for 10 km / 2 zoner, dog aldrig mere end 30 % af løn efter skat (§105 SEL).",
     )
 
     if inp.transport == TRANSPORT_INGEN:
@@ -176,7 +176,7 @@ def beregn(inp: Input, par: Parametre, zonepriser: dict[int, Zonepris]) -> Resul
         _trin(
             res,
             "Taxa: egenbetaling trækkes (lønart 991)",
-            "kommunen betaler taxaen, borgerens egenbetaling trækkes i lønnen",
+            "kommunen betaler taxaen, medarbejderens egenbetaling trækkes i lønnen",
             f"egenbetaling {kr(res.egenbetaling)} kr",
             f"træk {kr(res.traek_991)} kr",
         )
