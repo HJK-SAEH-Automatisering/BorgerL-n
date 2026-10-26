@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load asset_tags %}
 {% block title %}Undtagelser{% endblock %}
 {% block stepper %}{% include "koersel/_stepper.html" %}{% endblock %}
 {% block sideclass %} med-trin{% endblock %}
@@ -46,4 +46,4 @@
   </div>
 </form>
 {% endblock %}
-{% block scripts %}<script src="{% static 'js/undtagelser.js' %}"></script>{% endblock %}
+{% block scripts %}<script src="{% static_v 'js/undtagelser.js' %}"></script>{% endblock %}
