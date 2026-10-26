@@ -30,6 +30,7 @@ eller nummeret på den rapport opgaven kom af.>
 | Emne |
 |---|
 | Indfør versionsnummer, start på 0.1.0, før første udrulning |
+| Få stylesheetet til at skifte navn, når det ændres, så browseren ikke viser en gammel udgave |
 
 <Den grove liste: hvad architect kan se der skal laves. **Ingen numre.**
 Et emne får først et nummer når interviewet har gjort det udførbart —
@@ -47,6 +48,7 @@ ellers fyldes `docs/tasks/` med halve idéer.>
 | task-0006 | Beregningsgrundlag som knap og egen side på Godkend-skærmen | bygget |
 | task-0007 | Skift ordet borger til medarbejder, og navnet BorgerLøn til MedarbejderLøn | bygget |
 | task-0008 | Afklar uden valg giver en besked i stedet for en serverfejl | bygget |
+| task-0009 | Placér knappen Beregningsgrundlag ved siden af Godkend | bygget |
 
 <`Udfald` er `bygget` eller `afvist`. Flyt hertil når architect har vurderet
 opgaven — ikke når udrulningen er sket; udrulning er ikke en status.

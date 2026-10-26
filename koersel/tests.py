@@ -467,6 +467,51 @@ class FlowTests(TestCase):
         # Knappen står stadig, også når borgeren er godkendt
         self.assertContains(svar, "Godkendt")
 
+    def test_godkend_og_beregningsgrundlag_staar_i_samme_celle_med_godkend_foerst(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        url = reverse("godkend", args=[k.pk])
+
+        def celler(svar):
+            html = svar.content.decode()
+            # Hver celle går fra sin åbning til næste celle (eller rækkens slutning)
+            dele = html.split('<div class="knapper">')[1:]
+            return [d.split("</div>")[0] for d in dele]
+
+        # Ikke godkendt: begge knapper i samme celle, og "Beregningsgrundlag" efter "Godkend"
+        udfald = celler(self.client.get(url))
+        self.assertEqual(len(udfald), 2)
+        for celle in udfald:
+            self.assertEqual(celle.count(">Godkend</button>"), 1)
+            self.assertEqual(celle.count(">Beregningsgrundlag</a>"), 1)
+            self.assertLess(celle.index(">Godkend</button>"), celle.index(">Beregningsgrundlag</a>"))
+
+        # Godkendt: cellen står stadig, men kun med "Beregningsgrundlag"
+        self.client.post(url, {"handling": "godkend_alle"})
+        udfald = celler(self.client.get(url))
+        self.assertEqual(len(udfald), 2)
+        for celle in udfald:
+            self.assertNotIn(">Godkend</button>", celle)
+            self.assertNotIn("<form", celle)
+            self.assertEqual(celle.count(">Beregningsgrundlag</a>"), 1)
+
+    def test_knapkolonnen_har_ingen_fast_bredde_og_knapperne_ombrydes_ikke(self):
+        css = (settings.BASE_DIR / "static" / "css" / "app.css").read_text(encoding="utf-8")
+
+        def regel(vaelger):
+            m = re.search(r"^" + re.escape(vaelger) + r" \{([^}]*)\}", css, re.M)
+            self.assertIsNotNone(m, f"Reglen {vaelger} findes ikke")
+            return m.group(1)
+
+        kolonner = re.search(r"grid-template-columns:\s*([^;]+);", regel(".g4")).group(1).split()
+        # Sidste kolonne er knapkolonnen: den fylder det knapperne selv fylder, ikke en fast pixelbredde
+        self.assertEqual(kolonner[-1], "max-content")
+        knapper = regel(".knapper")
+        self.assertIn("flex-wrap: nowrap", knapper)
+        self.assertIn("white-space: nowrap", knapper)
+        # Cellen har ingen fast bredde i skabelonen
+        self.assertNotIn('class="knapper" style', (settings.BASE_DIR / "templates" / "koersel" / "godkend.html").read_text(encoding="utf-8"))
+
     def test_beregningsgrundlag_viser_borger_og_tabel_uden_cpr_og_adresse(self):
         self.p1.adresse = "Fiktiv Vej 1, 9000 Testby"
         self.p1.save()
