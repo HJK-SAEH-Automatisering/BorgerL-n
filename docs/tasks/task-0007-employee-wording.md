@@ -2,7 +2,7 @@
 nummer: task-0007
 titel: Skift ordet borger til medarbejder, og navnet BorgerLøn til MedarbejderLøn
 kilde: interview
-status: i-gang
+status: afsluttet
 oprettet: 2026-10-26
 ---
 
@@ -17,6 +17,7 @@ Skærmene:
 - [ ] Ingen skærm viser længere ordet "borger" i nogen form, hverken i topbjælke, menuer, overskrifter, knapper, tabeloverskrifter, meddelelser, fejl, hjælpetekster, formularfelter, tomme tilstande eller advarsler. "Borgere" er blevet til "Medarbejdere", "borgerens" til "medarbejderens", og "Borgerregister" til "Medarbejderregister". Bøjninger og sammensatte ord følger med.
 - [ ] Appens synlige navn er "MedarbejderLøn" i topbjælken, i sidernes titler og på loginsiden.
 - [ ] Administrationssiden viser medarbejder og medarbejdere i stedet for borger og borgere, også i overskrifter og feltnavne.
+- [ ] I administrationens auditlog vises objekttypen som "Medarbejder" i kolonnen og i filteret. Det er kun visningen; de gemte data og de gamle handlingstekster (fx "Oprettede borger") ændres ikke, fordi auditloggen er historik.
 
 Rapporter og eksport:
 
@@ -62,6 +63,8 @@ task-0006 — begge ændrer Godkend-skærmen og de tests, der kontrollerer dens 
 - BESLUTTET: Kun synlig tekst ændres — navne i koden, tabeller og adresser bliver. En omdøbning af dem er en stor og risikabel ændring uden gevinst for brugerne. Afvist: omdøbning af modeller, tabeller og adresser.
 - BESLUTTET: Det synlige navn skifter til "MedarbejderLøn" — mennesket valgte det, fordi navnet indeholder ordet. Mappen og repoet bliver. Afvist: at omdøbe repoet nu.
 - BESLUTTET: Gemte PDF-rapporter ændres ikke — den gemte PDF er selve beviset på en beregning.
+- BESLUTTET: Auditloggen viser objekttypen som "Medarbejder" i administrationen, men gamle gemte handlingstekster ændres ikke — de er historik, og en revisionslog skal ikke omskrives. Tilføjet efter udviklerens spørgsmål.
+- BESLUTTET: "Administrativ medarbejder" bliver som navn på dem, der bruger appen, og "medarbejder" er dem, der får løn — ordet "administrativ" skelner. Afvist: et nyt ord til brugerne uden at mennesket har bedt om det.
 - BESLUTTET: `README.md`, `CLAUDE.md` og `docs/losningsforslag.md` rettes, men skitser, beslutningslog, afsluttede opgaver og testrapporter gør ikke — de er historik.
 
 ## Åbne punkter
@@ -88,6 +91,8 @@ Skærmene:
 - Administrationen: `register/models.py` får `verbose_name = "medarbejder"` / `verbose_name_plural = "medarbejdere"`. `koersel/models.py`: feltet `Linje.borger` får `verbose_name="medarbejder"`, og hjælpeteksten på `kandidater` er rettet. Administrationen har ingen egne overskrifter i `config/urls.py` eller `admin.py`, så der var ikke mere at rette.
 - Migreringer: `register/migrations/0002_alter_borger_options.py` og `koersel/migrations/0004_alter_linje_borger_alter_linje_kandidater.py`, lavet med `makemigrations`. Kun visningsnavne og hjælpetekst; ingen datakopiering, ingen skemaændring. De er endnu ikke kørt mod den lokale `db.sqlite3` (kør `manage.py migrate`; den kørende server ser ikke forskel).
 - `register/management/commands/seed_demo.py`: hjælpeteksten. Kommandoens øvrige udskrifter indeholder ikke ordet.
+- Auditloggen i administrationen (`audit/admin.py`, commit "vis objekttypen som medarbejder i auditloggen"): kolonnen er nu en visningsmetode `objekt_type_visning` (overskrift "objekt type", kan stadig sorteres på den gemte værdi), der viser klassenavnet "Borger" som "Medarbejder"; øvrige typer vises, som de er. Filteret er et eget filter (`ObjektTypeFilter`), der viser "Medarbejder", men stadig filtrerer på den gemte værdi (`?objekt_type=Borger`). Søgning på detaljer og handling er uændret. `audit/models.py`, logfunktionen, gemte data og gamle handlingstekster ("Oprettede borger") er ikke rørt, og der er ingen migrering (`makemigrations --check`: "No changes detected"). Gammelt og nyt ord står dermed ikke mere side om side i objekttype-filteret; handlingsfilteret viser stadig de gamle handlingstekster, fordi de er historik.
+- Ny test `FlowTests.test_auditloggen_viser_objekttypen_medarbejder` (`koersel/tests.py`): opdigtede poster med objekttypen Borger (og handlingen "Oprettede borger") og Koersel; kontrollerer at kolonnen viser "Medarbejder" og "Koersel", at filteret viser "Medarbejder" men linker til `objekt_type=Borger`, at "Borger" ikke vises som tekst i kolonnen eller filteret, at filtrering på den gemte værdi giver kun den ene post, at søgning virker, og at de gemte data er uændrede. Jeg har set testen fejle mod den gamle `audit/admin.py` og bestå mod den nye.
 
 Rapporter og eksport:
 - `beregning/engine.py`: "Sats pr. time mangler på medarbejderen.", trinnet "Medarbejderens egenbetaling for transport" og dets forklaring, "medarbejderens egenbetaling trækkes i lønnen". Beløb og regler uændrede.
@@ -107,7 +112,7 @@ Tests:
 - Ny test `FlowTests.test_rapporten_bruger_ordet_medarbejder`: nyt snapshot har `rapport_layout == 2`, og PDF-teksten (uden komprimering) indeholder "antal medarbejdere" og ikke "borger".
 
 Kørt:
-- `.venv\Scripts\python.exe manage.py test`: "Ran 79 tests ... OK" (79 tests, alle grønne).
+- `.venv\Scripts\python.exe manage.py test` (kørt til sidst, efter auditlog-rettelsen): "Ran 80 tests in 35.069s ... OK" (80 tests, alle grønne). Før auditlog-rettelsen var det 79.
 - `.venv\Scripts\python.exe manage.py makemigrations --check`: "No changes detected", exit 0.
 - Udseendet er ikke efterprøvet visuelt (ingen browser startet). Kun HTML og tekst er kontrolleret.
 
@@ -118,11 +123,11 @@ Søgning til sidst (hvad der stadig indeholder "borger", alt sammen navne i kode
 
 ### Hvad er ikke lavet, og hvorfor
 - Gamle gemte kørsler viser stadig de gamle ord. Advarsler og trin i et gemt snapshot (fx "Sats pr. time mangler på borgeren.", "Borgerens egenbetaling for transport") læses fra snapshotten, så Godkend-skærmen og beregningsgrundlaget for kørsler beregnet før denne opgave viser dem uændret. Det følger af, at snapshots er uforanderlige; kun nye beregninger får de nye ord. Ikke en fejl, men "ingen skærm viser borger" gælder derfor kun nye beregninger.
-- Auditlog-siden i administrationen viser stadig "Borger" i kolonnen og filteret "objekt_type" (klassenavnet, gemt som data), og de gamle linjer i `handling` hedder fortsat "Oprettede borger" osv. Nye handlinger får det nye ord, så filteret viser nu begge ord. Jeg har ikke ændret gemte data eller logfunktionen, der skriver klassenavnet.
+- De gamle linjer i auditloggens `handling` hedder fortsat "Oprettede borger" osv. og vises uændret i kolonnen og i handlingsfilteret; nye handlinger får det nye ord, så handlingsfilteret viser begge ord. Det er historik og ændres ikke, som opgaven siger. (Objekttypen i kolonnen og filteret er rettet, se "Hvad er lavet".)
 - Ingen browser, så udseendet er ikke efterprøvet.
 - `manage.py migrate` er ikke kørt mod den lokale database (migreringerne er rene visningsændringer).
 
 ### Uklart
-- Skal auditloggens objekttype ("Borger") vises som "Medarbejder" i administrationen? Det kræver en visningsmetode og et eget filter, ikke en dataændring; jeg gjorde det ikke, fordi det ligger uden for det opgaven nævner. Kriteriet "administrationssiden viser medarbejder i stedet for borger" er ellers opfyldt for de sider, testen dækker (forside, medarbejderliste, ny og ret).
-- Ordet "medarbejder" betyder nu både brugeren ("Kun administrative medarbejdere har adgang" på loginsiden, "administrative medarbejdere" i `docs/losningsforslag.md`) og de personer, der får løn. Jeg har ikke ændret loginsidens sætning, fordi den ikke indeholdt "borger". Ønsker mennesket en tydeligere forskel (fx "administrative brugere"), er det en ny opgave.
-- Fund uden for opgaven (ikke rettet): på Gennemse-skærmen er der en tom valgmulighed i listen "Vælg medarbejder i registret" (`value=""`). Trykker man på knappen til afklaring uden at vælge, kalder `koersel/views.py` (omkring linje 95) `Borger.objects.filter(pk="")`, og det giver en serverfejl (`ValueError: Field 'id' expected a number but got ''`) frem for beskeden "Vælg en medarbejder i listen.". Min test bruger derfor et ukendt nummer for at nå beskeden. Det samme gælder før denne opgave.
+intet. De tidligere spørgsmål er besvaret af architect: auditlogens objekttype vises nu som "Medarbejder" (se "Hvad er lavet"), "administrativ medarbejder" bliver som navn på brugerne, og fejlen ved afklaring uden valg er task-0008 (ikke rettet her; min test bruger stadig et ukendt nummer for at nå beskeden).
+
+Ikke efterprøvet: udseendet af auditlog-siden (ingen browser startet); kun det genererede HTML er kontrolleret i testen.
