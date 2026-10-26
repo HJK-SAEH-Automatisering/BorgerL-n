@@ -432,7 +432,7 @@ class FlowTests(TestCase):
         svar = self.client.get(url)
         tjek_fjernet(svar)
         self.assertContains(svar, "Godkend alle")
-        self.assertContains(svar, "Eksport er låst, til alle medarbejdere er godkendt.")
+        self.assertNotContains(svar, "Eksport er låst")
 
         self.client.post(url, {"handling": "godkend_alle"})
         svar = self.client.get(url)
@@ -440,6 +440,101 @@ class FlowTests(TestCase):
         self.assertContains(svar, "Genåbn til rettelser")
         self.assertContains(svar, "Eksportér lønudtræk (CSV)")
         self.assertNotContains(svar, "Eksport er låst")
+
+    def test_knapperne_oeverst_staar_i_ny_raekkefoelge_og_er_laast_til_alle_er_godkendt(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        b = k.beregninger.get()
+        r1 = b.resultater.order_by("pk").first()
+        url = reverse("godkend", args=[k.pk])
+        forklaring = "Kan først bruges, når alle medarbejdere er godkendt."
+        pdf_tekst = f"Åbn PDF-rapport {b.rapport_id}"
+        eksport_url = reverse("eksport", args=[k.pk])
+        rapport_url = reverse("rapport", args=[b.pk])
+
+        def top(html):
+            start = html.index('<div class="actions"')
+            return html[start:html.index("<h2>Beregning pr. medarbejder</h2>", start)]
+
+        def laast(top_html, tekst):
+            # En deaktiveret knap uden adresse, med forklaring til både mus og skærmlæser
+            m = re.search(r"<button[^>]*>" + re.escape(tekst) + "</button>", top_html)
+            self.assertIsNotNone(m, f"Der er ingen knap med teksten {tekst}")
+            knap = m.group(0)
+            self.assertIn("disabled", knap)
+            self.assertNotIn("href", knap)
+            self.assertNotIn('type="submit"', knap)
+            self.assertIn(f'title="{forklaring}"', knap)
+            self.assertIn(f'aria-label="{forklaring}"', knap)
+            self.assertNotIn(f'>{tekst}</a>', top_html)
+
+        def link(top_html, tekst, adresse):
+            self.assertRegex(top_html, r'<a class="btn" href="' + re.escape(adresse) + r'"[^>]*>' + re.escape(tekst) + "</a>")
+            self.assertNotRegex(top_html, r"<button[^>]*>" + re.escape(tekst) + "</button>")
+
+        def raekkefoelge(top_html):
+            positioner = [top_html.index(t) for t in ("Godkend alle", "Genåbn til rettelser", "Eksportér lønudtræk (CSV)", pdf_tekst)]
+            self.assertEqual(positioner, sorted(positioner))
+
+        def genaabn_er_aktiv(top_html):
+            m = re.search(r"<form[^>]*>(?:(?!</form>).)*value=\"genaabn\"(?:(?!</form>).)*</form>", top_html, re.S)
+            self.assertIsNotNone(m)
+            self.assertIn(">Genåbn til rettelser</button>", m.group(0))
+            self.assertNotIn("disabled", m.group(0))
+
+        # Ingen er godkendt
+        html = self.client.get(url).content.decode()
+        t = top(html)
+        raekkefoelge(t)
+        self.assertIn('value="godkend_alle"', t)
+        self.assertNotIn('class="godkendt"', t)
+        self.assertIn(">Godkend alle</button>", t)
+        genaabn_er_aktiv(t)
+        laast(t, "Eksportér lønudtræk (CSV)")
+        laast(t, pdf_tekst)
+        self.assertNotIn(eksport_url, t)
+        self.assertNotIn(rapport_url, t)
+        self.assertNotIn("Eksport er låst", html)
+        self.assertNotIn('<span class="badge ok">Godkendt</span>', html)
+
+        # Eksportadressen afviser stadig på serveren
+        self.assertRedirects(self.client.get(eksport_url), url)
+
+        # Kun den ene godkendt: stadig låst
+        self.client.post(url, {"handling": "godkend", "resultat": r1.pk})
+        t = top(self.client.get(url).content.decode())
+        laast(t, "Eksportér lønudtræk (CSV)")
+        laast(t, pdf_tekst)
+        self.assertIn('value="godkend_alle"', t)
+        self.assertRedirects(self.client.get(eksport_url), url)
+
+        # Alle godkendt
+        self.client.post(url, {"handling": "godkend_alle"})
+        html = self.client.get(url).content.decode()
+        t = top(html)
+        raekkefoelge(t)
+        link(t, "Eksportér lønudtræk (CSV)", eksport_url)
+        self.assertRegex(t, r'<a class="btn" href="' + re.escape(rapport_url) + r'" target="_blank" rel="noopener">' + re.escape(pdf_tekst) + "</a>")
+        self.assertNotRegex(t, r"<button[^>]*>" + re.escape(pdf_tekst) + "</button>")
+        self.assertNotIn('value="godkend_alle"', t)
+        m = re.search(r"<button[^>]*>Godkend alle</button>", t)
+        self.assertIsNotNone(m)
+        self.assertIn('type="button" disabled class="godkendt"', m.group(0))
+        self.assertIn('title="Alle medarbejdere er godkendt."', m.group(0))
+        self.assertIn('aria-label="Alle medarbejdere er godkendt."', m.group(0))
+        genaabn_er_aktiv(t)
+        self.assertNotIn("Eksport er låst", html)
+        self.assertNotIn('<span class="badge ok">Godkendt</span>', html)
+        self.assertNotIn(forklaring, t)
+        self.assertEqual(self.client.get(eksport_url).status_code, 200)
+
+        # Genåbn: tilbage til den låste tilstand, og knappen er der hele vejen
+        self.client.post(url, {"handling": "genaabn"})
+        t = top(self.client.get(url).content.decode())
+        laast(t, "Eksportér lønudtræk (CSV)")
+        laast(t, pdf_tekst)
+        genaabn_er_aktiv(t)
+        self.assertRedirects(self.client.get(eksport_url), url)
 
     def test_godkend_skaermen_har_ikke_knappen_tilbage_til_undtagelser_men_trinsoejlen_linker_dertil(self):
         k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
@@ -554,7 +649,7 @@ class FlowTests(TestCase):
         svar = self.client.get(url)
         html = svar.content.decode()
         uden_maerker(html)
-        # Det samlede mærke øverst står kun, når hele kørslen er godkendt
+        # Der er intet samlet mærke øverst
         self.assertNotIn('<span class="badge ok">Godkendt</span>', html)
 
         # Rækkefølgen af rækkerne er ikke afgørende; den godkendte er den uden formular
@@ -583,9 +678,9 @@ class FlowTests(TestCase):
         svar = self.client.get(url)
         html = svar.content.decode()
         uden_maerker(html)
-        # Det samlede mærke øverst (ikke et rækkemærke) står stadig
-        self.assertEqual(html.count('<span class="badge ok">Godkendt</span>'), 1)
-        self.assertEqual(html.count('class="badge ok"'), 1)
+        # Mærket "Godkendt" øverst er væk; den grønne "Godkend alle" viser oplysningen
+        self.assertNotIn('<span class="badge ok">Godkendt</span>', html)
+        self.assertNotIn('class="badge ok"', html)
         for celle in celler(html):
             self.assertEqual(toplevel(celle), ['button type="button" disabled class="godkendt"', 'a class="btn"'])
             self.assertIn('title="Godkendt af tester ', celle)
