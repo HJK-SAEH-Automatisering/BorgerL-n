@@ -495,6 +495,23 @@ class FlowTests(TestCase):
             self.assertNotIn("<form", celle)
             self.assertEqual(celle.count(">Beregningsgrundlag</a>"), 1)
 
+    def test_knapkolonnen_har_ingen_fast_bredde_og_knapperne_ombrydes_ikke(self):
+        css = (settings.BASE_DIR / "static" / "css" / "app.css").read_text(encoding="utf-8")
+
+        def regel(vaelger):
+            m = re.search(r"^" + re.escape(vaelger) + r" \{([^}]*)\}", css, re.M)
+            self.assertIsNotNone(m, f"Reglen {vaelger} findes ikke")
+            return m.group(1)
+
+        kolonner = re.search(r"grid-template-columns:\s*([^;]+);", regel(".g4")).group(1).split()
+        # Sidste kolonne er knapkolonnen: den fylder det knapperne selv fylder, ikke en fast pixelbredde
+        self.assertEqual(kolonner[-1], "max-content")
+        knapper = regel(".knapper")
+        self.assertIn("flex-wrap: nowrap", knapper)
+        self.assertIn("white-space: nowrap", knapper)
+        # Cellen har ingen fast bredde i skabelonen
+        self.assertNotIn('class="knapper" style', (settings.BASE_DIR / "templates" / "koersel" / "godkend.html").read_text(encoding="utf-8"))
+
     def test_beregningsgrundlag_viser_borger_og_tabel_uden_cpr_og_adresse(self):
         self.p1.adresse = "Fiktiv Vej 1, 9000 Testby"
         self.p1.save()
