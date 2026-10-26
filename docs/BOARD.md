@@ -49,6 +49,7 @@ ellers fyldes `docs/tasks/` med halve idéer.>
 | task-0007 | Skift ordet borger til medarbejder, og navnet BorgerLøn til MedarbejderLøn | bygget |
 | task-0008 | Afklar uden valg giver en besked i stedet for en serverfejl | bygget |
 | task-0009 | Placér knappen Beregningsgrundlag ved siden af Godkend | bygget |
+| task-0010 | Fjern knappen Tilbage til undtagelser på Godkend-skærmen | bygget |
 
 <`Udfald` er `bygget` eller `afvist`. Flyt hertil når architect har vurderet
 opgaven — ikke når udrulningen er sket; udrulning er ikke en status.
