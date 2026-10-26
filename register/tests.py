@@ -24,8 +24,8 @@ class BorgerRegisterTests(TestCase):
         b = Borger.objects.get()
         self.assertEqual(b.cpr, "010203-0405")
         self.assertEqual(b.zoner, 2)
-        self.assertTrue(AuditLog.objects.filter(handling="Oprettede borger").exists())
-        self.assertNotIn("0405", AuditLog.objects.get(handling="Oprettede borger").detaljer)
+        self.assertTrue(AuditLog.objects.filter(handling="Oprettede medarbejder").exists())
+        self.assertNotIn("0405", AuditLog.objects.get(handling="Oprettede medarbejder").detaljer)
 
     def test_ugyldigt_cpr_afvises(self):
         svar = self.opret(cpr="123")
