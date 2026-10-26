@@ -52,7 +52,8 @@ class Borger(models.Model):
 
     class Meta:
         ordering = ["navn"]
-        verbose_name_plural = "borgere"
+        verbose_name = "medarbejder"
+        verbose_name_plural = "medarbejdere"
 
     def __str__(self):
         return self.navn
