@@ -506,14 +506,109 @@ class FlowTests(TestCase):
             self.assertEqual(celle.count(">Beregningsgrundlag</a>"), 1)
             self.assertLess(celle.index(">Godkend</button>"), celle.index(">Beregningsgrundlag</a>"))
 
-        # Godkendt: cellen står stadig, men kun med "Beregningsgrundlag"
+        # Godkendt: cellen står stadig, men "Godkend" er en deaktiveret knap uden formular
         self.client.post(url, {"handling": "godkend_alle"})
         udfald = celler(self.client.get(url))
         self.assertEqual(len(udfald), 2)
         for celle in udfald:
-            self.assertNotIn(">Godkend</button>", celle)
+            self.assertEqual(celle.count(">Godkend</button>"), 1)
+            self.assertIn("disabled", celle)
             self.assertNotIn("<form", celle)
             self.assertEqual(celle.count(">Beregningsgrundlag</a>"), 1)
+            self.assertLess(celle.index(">Godkend</button>"), celle.index(">Beregningsgrundlag</a>"))
+
+    def test_godkendte_og_ikke_godkendte_raekker_har_samme_opbygning_uden_maerker(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        b = k.beregninger.get()
+        r1 = b.resultater.order_by("pk").first()
+        url = reverse("godkend", args=[k.pk])
+
+        def celler(html):
+            return [d.split("</div>")[0] for d in html.split('<div class="knapper">')[1:]]
+
+        def raekker(html):
+            # Alt i en række før knapcellen: navn, tre beløb og eventuelle mærker
+            return [d.split('<div class="knapper">')[0] for d in html.split('<div class="row g4"')[1:]]
+
+        def toplevel(celle):
+            # De to elementer i cellen: formularen eller den deaktiverede knap, så linket
+            return re.findall(r'<(form|button type="button" disabled class="godkendt"|a class="btn")', celle)
+
+        def uden_maerker(html):
+            # Hverken "Afventer" eller "Godkendt" som mærke, og ingen mærker overhovedet i rækkerne
+            self.assertNotIn("Afventer", html)
+            self.assertEqual(len(raekker(html)), 2)
+            for raekke in raekker(html):
+                self.assertNotIn("badge", raekke)
+                self.assertNotIn("Afventer", raekke)
+                self.assertNotIn("Godkendt", raekke)
+
+        # Ingen række har mærker, og ingen grøn knap står før nogen er godkendt
+        svar = self.client.get(url)
+        uden_maerker(svar.content.decode())
+        self.assertNotContains(svar, 'class="godkendt"')
+
+        # Kun den ene medarbejder godkendes
+        self.client.post(url, {"handling": "godkend", "resultat": r1.pk})
+        svar = self.client.get(url)
+        html = svar.content.decode()
+        uden_maerker(html)
+        # Det samlede mærke øverst står kun, når hele kørslen er godkendt
+        self.assertNotIn('<span class="badge ok">Godkendt</span>', html)
+
+        # Rækkefølgen af rækkerne er ikke afgørende; den godkendte er den uden formular
+        a, b_celle = celler(html)
+        godkendt, ikke_godkendt = (b_celle, a) if "<form" in a else (a, b_celle)
+        # Begge celler har to elementer i samme rækkefølge: Godkend, så "Beregningsgrundlag"
+        self.assertEqual(toplevel(ikke_godkendt), ["form", 'a class="btn"'])
+        self.assertEqual(toplevel(godkendt), ['button type="button" disabled class="godkendt"', 'a class="btn"'])
+        # Den ikke-godkendte række har den aktive formular og ingen grøn knap
+        self.assertIn(">Godkend</button>", ikke_godkendt)
+        self.assertIn('name="handling" value="godkend"', ikke_godkendt)
+        self.assertNotIn("godkendt", ikke_godkendt)
+        self.assertNotIn("disabled", ikke_godkendt)
+        # Den godkendte række: knappen hedder stadig "Godkend", kan ikke trykkes, og er ikke en formular
+        self.assertEqual(godkendt.count(">Godkend</button>"), 1)
+        self.assertNotIn("<form", godkendt)
+        self.assertNotIn('type="submit"', godkendt)
+        # Hvem og hvornår står som oplysning på knappen, til både mus og skærmlæser
+        tidspunkt = timezone.localtime(b.resultater.get(pk=r1.pk).godkendt_tidspunkt).strftime("%d.%m.%Y %H:%M")
+        oplysning = f"Godkendt af tester {tidspunkt}"
+        self.assertIn(f'title="{oplysning}"', godkendt)
+        self.assertIn(f'aria-label="{oplysning}"', godkendt)
+
+        # Efter "Godkend alle" har begge rækker samme opbygning og ingen mærker
+        self.client.post(url, {"handling": "godkend_alle"})
+        svar = self.client.get(url)
+        html = svar.content.decode()
+        uden_maerker(html)
+        # Det samlede mærke øverst (ikke et rækkemærke) står stadig
+        self.assertEqual(html.count('<span class="badge ok">Godkendt</span>'), 1)
+        self.assertEqual(html.count('class="badge ok"'), 1)
+        for celle in celler(html):
+            self.assertEqual(toplevel(celle), ['button type="button" disabled class="godkendt"', 'a class="btn"'])
+            self.assertIn('title="Godkendt af tester ', celle)
+            self.assertIn('aria-label="Godkendt af tester ', celle)
+
+    def test_den_groenne_godkend_knap_har_egen_farve_uden_hover_og_pladsholderen_er_vaek(self):
+        css = (settings.BASE_DIR / "static" / "css" / "app.css").read_text(encoding="utf-8")
+        self.assertNotIn(".plads", css)
+        self.assertNotIn("plads", (settings.BASE_DIR / "templates" / "koersel" / "godkend.html").read_text(encoding="utf-8"))
+        regel = re.search(r"^(\.knapper button\.godkendt[^{]*)\{([^}]*)\}", css, re.M)
+        self.assertIsNotNone(regel)
+        vaelgere, indhold = regel.groups()
+        self.assertIn("background: var(--ok-bg)", indhold)
+        self.assertIn("color: var(--ok)", indhold)
+        self.assertIn("cursor: default", indhold)
+        # Hover og deaktiveret tilstand får samme farver, så hverken hover eller browserens grå tekst slår igennem
+        self.assertIn(".knapper button.godkendt:hover", vaelgere)
+        self.assertIn(".knapper button.godkendt:disabled", vaelgere)
+        # Mørk tilstand bruger de samme variabler, som er defineret dér
+        self.assertRegex(css, r"prefers-color-scheme: dark[^}]*--ok-bg:[^;]*; --ok:")
+        # Samme padding og kantbredde som den almindelige knap: reglen sætter ingen af dem
+        self.assertNotIn("padding", indhold)
+        self.assertNotIn("border-width", indhold)
 
     def test_knapkolonnen_har_ingen_fast_bredde_og_knapperne_ombrydes_ikke(self):
         css = (settings.BASE_DIR / "static" / "css" / "app.css").read_text(encoding="utf-8")
@@ -523,9 +618,14 @@ class FlowTests(TestCase):
             self.assertIsNotNone(m, f"Reglen {vaelger} findes ikke")
             return m.group(1)
 
-        kolonner = re.search(r"grid-template-columns:\s*([^;]+);", regel(".g4")).group(1).split()
+        g4 = regel(".g4")
+        kolonner = re.findall(r"minmax\([^)]*\)|\S+", re.search(r"grid-template-columns:\s*([^;]+);", g4).group(1))
+        # Fem kolonner: navn, tre beløb og knapper; statuskolonnen findes ikke længere
+        self.assertEqual(len(kolonner), 5)
         # Sidste kolonne er knapkolonnen: den fylder det knapperne selv fylder, ikke en fast pixelbredde
         self.assertEqual(kolonner[-1], "max-content")
+        # Mere luft mellem kolonnerne end de tidligere 10 px
+        self.assertGreaterEqual(int(re.search(r"column-gap:\s*(\d+)px", g4).group(1)), 20)
         knapper = regel(".knapper")
         self.assertIn("flex-wrap: nowrap", knapper)
         self.assertIn("white-space: nowrap", knapper)
