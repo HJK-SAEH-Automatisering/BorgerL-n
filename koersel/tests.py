@@ -319,6 +319,22 @@ class FlowTests(TestCase):
         self.assertEqual((self.p2.afstand_km, self.p2.transport), (Decimal("7.5"), "ingen"))
         self.assertTrue(AuditLog.objects.filter(handling="Ændrede medarbejder fra gennemsyn").exists())
 
+    def test_afklar_uden_valgt_medarbejder_giver_besked_og_aendrer_intet(self):
+        k = self.opret_og_upload([("Ukendt", "5:00")])
+        l = k.linjer.get()
+        antal_logs = AuditLog.objects.count()
+        for data in ({"handling": "afklar", "linje": l.pk, "borger": ""}, {"handling": "afklar", "linje": l.pk}, {"handling": "afklar", "linje": l.pk, "borger": "abc"}):
+            with self.subTest(data=data):
+                svar = self.client.post(reverse("gennemse", args=[k.pk]), data, follow=True)
+                self.assertEqual(svar.status_code, 200)
+                self.assertRedirects(svar, reverse("gennemse", args=[k.pk]))
+                self.assertContains(svar, "Vælg en medarbejder i listen.")
+                self.assertContains(svar, "Bekræft match")
+                l.refresh_from_db()
+                self.assertIsNone(l.borger)
+                self.assertNotEqual(l.match_status, Linje.Match.MATCHET)
+                self.assertEqual(AuditLog.objects.count(), antal_logs)
+
     def test_beregn_afvises_naar_zone_mangler(self):
         k = self.opret_og_upload([("Person 3", "44:12")])
         svar = self.undtagelser(k)
