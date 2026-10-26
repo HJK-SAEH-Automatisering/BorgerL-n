@@ -2,7 +2,7 @@
 nummer: task-0008
 titel: Afklar uden valg giver en besked i stedet for en serverfejl
 kilde: interview
-status: planlagt
+status: i-gang
 oprettet: 2026-10-26
 ---
 
@@ -46,5 +46,24 @@ intet
 <Alt over denne overskrift ejes af architect. Alt herunder skrives kun af developer, som aldrig retter i definitionen ovenfor.>
 
 ### Hvad er lavet
+Årsagen: i handlingen `afklar` i `gennemse` (`koersel/views.py`) slog koden den valgte medarbejder op med `Borger.objects.filter(pk=request.POST.get("borger"), aktiv=True)`. Den tomme valgmulighed sender `borger=""`, og Django kaster `ValueError: Field 'id' expected a number but got ''`. Det blev en serverfejl, og `messages.error(...)` blev aldrig nået. Et helt manglende felt gav `pk=None`, som returnerer tom, og gik allerede godt.
+
+- `koersel/views.py`: værdien læses først og slås kun op, hvis den består af ASCII-cifre. Ellers er `borger` `None`, og den eksisterende besked "Vælg en medarbejder i listen." vises med `messages.error`. Visningen omdirigerer til `gennemse` som før. Rækken røres ikke, og der skrives ingen auditlog. (Færdig når punkt 1 og 3.) Samme rettelse dækker en ikke-numerisk værdi (fx `abc`), som gav samme `ValueError`.
+- `koersel/tests.py`: ny test `test_afklar_uden_valgt_medarbejder_giver_besked_og_aendrer_intet` i `FlowTests`. Den poster `afklar` mod en kørsel med en uafklaret række med tom værdi, helt manglende felt og `abc`. For hver kontrolleres det, at der ikke er serverfejl, at man lander på `gennemse`, at beskeden vises, at rækken stadig er uafklaret (`borger` er `None`, ikke `MATCHET`), og at antallet af auditlog-linjer er uændret. (Punkt 4.) Testen fejlede med 2 fejl (tom værdi og `abc`) uden rettelsen og er grøn med den.
+- Valg og "Bekræft match" virker som før (punkt 2). Det er allerede dækket af `test_afklar_raekke_og_gem_rettelser_i_registret`, `test_filens_dage_overlever_gem_uden_individuel_og_manuel_afklaring` og den ukendte-id-test i fladetesten (ca. linje 547-550), så jeg har ikke tilføjet en ny.
+- Hele suiten kørt én gang (punkt 5): `Ran 81 tests ... OK`. `makemigrations --check`: `No changes detected`.
+- Skabelonen er ikke rørt, ingen migrering, ingen nye felter. Ingen ny kommando eller indstilling til README.
+- Udseende er ikke efterprøvet, fordi det kræver en browser. Der er kun testet med HTTP-kald og påstande om HTML.
+- Commit: `cbd5be1`.
+
+Fund i de øvrige handlinger i visningen (ikke rørt, som aftalt):
+- `linje` i `afklar`: `get_object_or_404(Linje, pk=request.POST.get("linje"), koersel=koersel)` har samme mønster. Tom eller ikke-numerisk `linje` giver `ValueError` og dermed en serverfejl i stedet for 404. Et manglende felt giver 404 som det skal. Skabelonen sender altid et gyldigt `linje`, så det kan kun ske med en forfalsket anmodning. Jeg har ikke kørt det, kun læst koden.
+- `gem`: tåler tomme og ugyldige værdier. Afstand læses med `_dec` (ugyldigt eller negativt giver `None`), transport kontrolleres mod listen, og rækkerne med fejl samles i en besked. Ingen fejl fundet.
+- `fortsaet` (og alt andet end `afklar` og `gem`): ingen opslag på brugerværdier. Ingen fejl fundet.
+- "Opret ny medarbejder" er et link til en anden visning, ikke en handling her. Dér (`borger_ny` i `register/views.py`, linje 36-39) bruges `?linje=` direkte i `get_object_or_404(Linje, pk=...)`. En ikke-numerisk værdi (fx `?linje=abc`) giver samme `ValueError` og en serverfejl. Linket i skabelonen bygger altid værdien af rækkens id, så det rammer kun en håndskrevet adresse. Ikke kørt, kun læst.
+
 ### Hvad er ikke lavet, og hvorfor
+intet. De to fund med `linje` ovenfor ligger uden for opgaven (den siger "alle andre knapper" og "alle andre skærme" rører vi ikke), så jeg har ikke rettet dem.
+
 ### Uklart
+intet
