@@ -66,6 +66,7 @@ input:disabled, select:disabled { opacity: 0.45; }
 .g4 { grid-template-columns: minmax(48px, 1fr) 90px 90px 96px 80px max-content; column-gap: 10px; }
 .knapper { display: flex; flex-wrap: nowrap; justify-content: flex-end; align-items: center; gap: 8px; white-space: nowrap; }
 .knapper form { display: inline; margin: 0; }
+.knapper .plads { visibility: hidden; }
 .row.mangler { background: var(--warn-bg); box-shadow: inset 4px 0 0 var(--bad), inset 0 0 0 1.5px var(--bad); }
 .nm { font-weight: 500; margin: 0; }
 .mu { color: var(--text-2); font-size: 12px; margin: 0; }

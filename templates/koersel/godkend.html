@@ -34,10 +34,12 @@
       <span class="right nowrap"><span class="mu">Løn før skat</span><br>{{ r.loen_foer|floatformat:"2g" }} kr</span>
       <span class="right nowrap"><span class="mu">Træk 991</span><br>{{ r.traek_991|floatformat:"2g" }} kr</span>
       <span class="right nowrap"><span class="mu">Udbetaling 991</span><br><strong>{{ r.udbetaling_991|floatformat:"2g" }} kr</strong></span>
-      <span>{% if r.godkendt %}<span class="badge ok" title="{{ r.godkendt_af }} {{ r.godkendt_tidspunkt|date:'d.m.Y H:i' }}">Godkendt</span>{% else %}<span class="badge warn">Afventer</span>{% endif %}</span>
+      <span>{% if r.godkendt %}<span class="badge ok" title="{{ r.godkendt_af }} {{ r.godkendt_tidspunkt|date:'d.m.Y H:i' }}">Godkendt</span>{% endif %}</span>
       <div class="knapper">
         {% if not r.godkendt and koersel.status != 'godkendt' %}
         <form method="post">{% csrf_token %}<input type="hidden" name="resultat" value="{{ r.pk }}"><input type="hidden" name="handling" value="godkend"><button type="submit">Godkend</button></form>
+        {% else %}
+        <span class="btn plads" aria-hidden="true">Godkend</span>
         {% endif %}
         <a class="btn" href="{% url 'grundlag' koersel.pk r.pk %}" target="_blank" rel="noopener">Beregningsgrundlag</a>
       </div>

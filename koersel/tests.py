@@ -506,7 +506,7 @@ class FlowTests(TestCase):
             self.assertEqual(celle.count(">Beregningsgrundlag</a>"), 1)
             self.assertLess(celle.index(">Godkend</button>"), celle.index(">Beregningsgrundlag</a>"))
 
-        # Godkendt: cellen står stadig, men kun med "Beregningsgrundlag"
+        # Godkendt: cellen står stadig, men "Godkend" er kun en usynlig pladsholder, ikke en knap
         self.client.post(url, {"handling": "godkend_alle"})
         udfald = celler(self.client.get(url))
         self.assertEqual(len(udfald), 2)
@@ -514,6 +514,65 @@ class FlowTests(TestCase):
             self.assertNotIn(">Godkend</button>", celle)
             self.assertNotIn("<form", celle)
             self.assertEqual(celle.count(">Beregningsgrundlag</a>"), 1)
+
+    def test_godkendte_og_ikke_godkendte_raekker_har_samme_opbygning_og_afventer_er_vaek(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        b = k.beregninger.get()
+        r1 = b.resultater.order_by("pk").first()
+        url = reverse("godkend", args=[k.pk])
+
+        def celler(html):
+            return [d.split("</div>")[0] for d in html.split('<div class="knapper">')[1:]]
+
+        def toplevel(celle):
+            # De to elementer i cellen: formularen eller pladsholderen, så linket
+            return re.findall(r'<(form|span class="btn plads"|a class="btn")', celle)
+
+        # Ingen række har mærket "Afventer", hverken før eller efter godkendelse
+        svar = self.client.get(url)
+        self.assertNotContains(svar, "Afventer")
+        self.assertNotContains(svar, "Godkendt</span>")
+
+        # Kun den ene medarbejder godkendes
+        self.client.post(url, {"handling": "godkend", "resultat": r1.pk})
+        svar = self.client.get(url)
+        self.assertNotContains(svar, "Afventer")
+        html = svar.content.decode()
+        self.assertEqual(html.count('<span class="badge ok"'), 1)
+        self.assertEqual(html.count(">Godkendt</span>"), 1)
+
+        # Rækkefølgen af rækkerne er ikke afgørende; den godkendte er den uden formular
+        a, b_celle = celler(html)
+        godkendt, ikke_godkendt = (b_celle, a) if "<form" in a else (a, b_celle)
+        # Begge celler har to elementer i samme rækkefølge: Godkend-pladsen, så "Beregningsgrundlag"
+        self.assertEqual(len(toplevel(ikke_godkendt)), 2)
+        self.assertEqual(len(toplevel(godkendt)), 2)
+        self.assertEqual(toplevel(ikke_godkendt), ['form', 'a class="btn"'])
+        self.assertEqual(toplevel(godkendt), ['span class="btn plads"', 'a class="btn"'])
+        # Pladsholderen har samme tekst som knappen, er skjult for hjælpemidler og kan ikke trykkes
+        self.assertIn('<span class="btn plads" aria-hidden="true">Godkend</span>', godkendt)
+        placeholder = godkendt.split('<span class="btn plads"')[1].split("</span>")[0]
+        self.assertNotIn("href", placeholder)
+        self.assertNotIn("tabindex", placeholder)
+        self.assertNotIn("<button", godkendt)
+        self.assertNotIn("<form", godkendt)
+        self.assertIn(">Godkend</button>", ikke_godkendt)
+        # Skjules med CSS uden at fjerne pladsen
+        css = (settings.BASE_DIR / "static" / "css" / "app.css").read_text(encoding="utf-8")
+        regel = re.search(r"^\.knapper \.plads \{([^}]*)\}", css, re.M)
+        self.assertIsNotNone(regel)
+        self.assertIn("visibility: hidden", regel.group(1))
+        self.assertNotIn("display: none", regel.group(1))
+
+        # Efter "Godkend alle" har begge rækker samme opbygning
+        self.client.post(url, {"handling": "godkend_alle"})
+        svar = self.client.get(url)
+        self.assertNotContains(svar, "Afventer")
+        html = svar.content.decode()
+        self.assertEqual(html.count('<span class="badge ok"'), 2 + 1)  # to rækker og samlet mærke øverst
+        for celle in celler(html):
+            self.assertEqual(toplevel(celle), ['span class="btn plads"', 'a class="btn"'])
 
     def test_knapkolonnen_har_ingen_fast_bredde_og_knapperne_ombrydes_ikke(self):
         css = (settings.BASE_DIR / "static" / "css" / "app.css").read_text(encoding="utf-8")
