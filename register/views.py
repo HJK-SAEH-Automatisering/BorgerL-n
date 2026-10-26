@@ -39,7 +39,7 @@ def borger_ny(request):
         linje = get_object_or_404(Linje, pk=request.GET["linje"])
     form = BorgerForm(request.POST or None, initial={"navn": request.GET.get("navn", "")})
     if request.method == "POST" and form.is_valid():
-        borger = _gem(request, form, "Oprettede borger")
+        borger = _gem(request, form, "Oprettede medarbejder")
         if linje:
             linje.saet_borger(borger)
             linje.save()
@@ -55,7 +55,7 @@ def borger_ret(request, pk):
     borger = get_object_or_404(Borger, pk=pk)
     form = BorgerForm(request.POST or None, instance=borger)
     if request.method == "POST" and form.is_valid():
-        _gem(request, form, "Ændrede borger")
+        _gem(request, form, "Ændrede medarbejder")
         messages.success(request, f"Ændringerne for {borger.navn} er gemt.")
         return redirect("borger_liste")
     return render(request, "register/borger_form.html", {"form": form, "ny": False, "borger": borger})

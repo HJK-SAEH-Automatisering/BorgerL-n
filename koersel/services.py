@@ -67,7 +67,7 @@ def tilgaengelige_zoner(pr_dato) -> list[int]:
 
 def linje_fejl(linje: Linje, par, zonepriser) -> list[str]:
     if linje.borger_id is None:
-        return ["Borgeren er ikke afklaret."]
+        return ["Medarbejderen er ikke afklaret."]
     return engine.valider(byg_input(linje, dobbelt=False), zonepriser)
 
 
@@ -135,7 +135,7 @@ def valider_koersel(koersel: Koersel) -> dict[int, list[str]]:
 def koer_beregning(koersel: Koersel, bruger) -> Beregningskoersel:
     linjer = list(koersel.linjer.select_related("borger", "borger__afdeling"))
     if not linjer:
-        raise BeregningsFejl({}, ["Der er ingen borgere at beregne. Upload en timefil først."])
+        raise BeregningsFejl({}, ["Der er ingen medarbejdere at beregne. Upload en timefil først."])
     par, zoner, priser = hent_parametre(koersel.maaned)
     antal_pr_borger = Counter(l.borger_id for l in linjer if l.borger_id)
 
@@ -143,7 +143,7 @@ def koer_beregning(koersel: Koersel, bruger) -> Beregningskoersel:
     resultater = []
     for linje in linjer:
         if linje.borger_id is None:
-            fejl[linje.pk] = ["Borgeren er ikke afklaret."]
+            fejl[linje.pk] = ["Medarbejderen er ikke afklaret."]
             continue
         dobbelt = linje.dobbelt or antal_pr_borger[linje.borger_id] > 1
         res = engine.beregn(byg_input(linje, dobbelt), par, zoner)
@@ -239,7 +239,7 @@ def koer_beregning(koersel: Koersel, bruger) -> Beregningskoersel:
         )
     koersel.status = Koersel.Status.BEREGNET
     koersel.save(update_fields=["status"])
-    log(bruger, "Kørte beregning", beregning, f"{koersel.navn}, rapport {beregning.rapport_id}, {len(resultater)} borgere")
+    log(bruger, "Kørte beregning", beregning, f"{koersel.navn}, rapport {beregning.rapport_id}, {len(resultater)} medarbejdere")
     return beregning
 
 

@@ -94,7 +94,7 @@ def gennemse(request, pk):
             linje = get_object_or_404(Linje, pk=request.POST.get("linje"), koersel=koersel)
             borger = Borger.objects.filter(pk=request.POST.get("borger"), aktiv=True).first()
             if borger is None:
-                messages.error(request, "Vælg en borger i listen.")
+                messages.error(request, "Vælg en medarbejder i listen.")
             else:
                 linje.saet_borger(borger)
                 linje.save()
@@ -123,7 +123,7 @@ def gennemse(request, pk):
                         b.zoner = None
                 if ændret:
                     b.save()
-                    log(request.user, "Ændrede borger fra gennemsyn", b, f"{b.navn}: {', '.join(ændret)}")
+                    log(request.user, "Ændrede medarbejder fra gennemsyn", b, f"{b.navn}: {', '.join(ændret)}")
                 if linje.transport != transport:
                     linje.transport = transport
                     if transport != Transport.SELV:
@@ -134,7 +134,7 @@ def gennemse(request, pk):
             if fejl:
                 messages.error(request, "Ret afstand og transport for: " + ", ".join(fejl))
                 return redirect(f"{request.path}?ret=1")
-            messages.success(request, "Ændringerne er gemt i borgerregistret.")
+            messages.success(request, "Ændringerne er gemt i medarbejderregistret.")
         return redirect("undtagelser", pk=pk)
 
     linjer = list(koersel.linjer.select_related("borger"))
@@ -209,7 +209,7 @@ def undtagelser(request, pk):
             except services.BeregningsFejl as e:
                 afvist = True
                 generelt = e.generelt
-                messages.error(request, "Beregningen blev ikke kørt, fordi nogle borgere mangler oplysninger.")
+                messages.error(request, "Beregningen blev ikke kørt, fordi nogle medarbejdere mangler oplysninger.")
             else:
                 messages.success(request, f"Beregningen er kørt. PDF-rapport {beregning.rapport_id} er oprettet.")
                 return redirect("godkend", pk=pk)
@@ -264,7 +264,7 @@ def godkend(request, pk):
             return redirect("godkend", pk=pk)
         resultat_id = request.POST.get("resultat")
         antal = services.godkend(beregning, request.user, int(resultat_id) if resultat_id else None)
-        messages.success(request, f"{antal} borger(e) godkendt." if antal else "Intet at godkende.")
+        messages.success(request, f"{antal} medarbejder(e) godkendt." if antal else "Intet at godkende.")
         return redirect("godkend", pk=pk)
 
     resultater = list(beregning.resultater.all())
@@ -315,7 +315,7 @@ def rapport(request, pk):
 def eksport(request, pk):
     koersel = get_object_or_404(Koersel, pk=pk)
     if not services.kan_eksportere(koersel):
-        messages.error(request, "Lønudtrækket kan først eksporteres, når alle borgere er godkendt.")
+        messages.error(request, "Lønudtrækket kan først eksporteres, når alle medarbejdere er godkendt.")
         return redirect("godkend", pk=pk)
     beregning = koersel.aktiv_beregning
     log(request.user, "Eksporterede lønudtræk", beregning, beregning.rapport_id)

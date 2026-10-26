@@ -19,4 +19,4 @@ class BorgerAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
-        log(request.user, "Ændrede borger i admin" if change else "Oprettede borger i admin", obj, obj.navn)
+        log(request.user, "Ændrede medarbejder i admin" if change else "Oprettede medarbejder i admin", obj, obj.navn)
