@@ -1,4 +1,5 @@
 import hashlib
+import re
 import shutil
 import tempfile
 from datetime import date, time, timedelta
@@ -595,6 +596,35 @@ class FlowTests(TestCase):
         # Skærmkoden
         with open(settings.BASE_DIR / "static" / "js" / "undtagelser.js", encoding="utf-8") as f:
             self.assertNotIn("borger", f.read().lower())
+
+    def test_auditloggen_viser_objekttypen_medarbejder(self):
+        # Gamle poster har klassenavnet Borger som data og en gammel handlingstekst; kun visningen skal vise det nye ord
+        AuditLog.objects.create(bruger=self.bruger, handling="Oprettede borger", objekt_type="Borger", objekt_id=str(self.p1.pk), detaljer="Person 1")
+        AuditLog.objects.create(bruger=self.bruger, handling="Kørte beregning", objekt_type="Koersel", objekt_id="1", detaljer="Person 2")
+        admin = get_user_model().objects.create_superuser("admin", password="x-test-adgangskode-4")
+        self.client.force_login(admin)
+        url = reverse("admin:audit_auditlog_changelist")
+
+        svar = self.client.get(url)
+        self.assertEqual(svar.status_code, 200)
+        html = svar.content.decode()
+        kolonne = re.findall(r'<td class="field-objekt_type_visning">(.*?)</td>', html)
+        self.assertEqual(sorted(kolonne), ["Koersel", "Medarbejder"])
+        # Filteret viser det nye ord, men filtrerer stadig på den gemte værdi
+        filter_links = dict(re.findall(r'<a href="\?objekt_type=([^"&]*)[^"]*"[^>]*>\s*(.*?)\s*</a>', html))
+        self.assertEqual(filter_links, {"Borger": "Medarbejder", "Koersel": "Koersel"})
+        self.assertNotIn(">Borger<", html)
+
+        svar = self.client.get(url, {"objekt_type": "Borger"})
+        self.assertEqual(svar.context["cl"].result_count, 1)
+        self.assertEqual(svar.context["cl"].result_list[0].objekt_type, "Borger")
+
+        # Søgning virker uændret
+        svar = self.client.get(url, {"q": "Person 2"})
+        self.assertEqual([p.objekt_type for p in svar.context["cl"].result_list], ["Koersel"])
+
+        # De gemte data er uændrede
+        self.assertTrue(AuditLog.objects.filter(objekt_type="Borger", handling="Oprettede borger").exists())
 
     def test_rapporten_bruger_ordet_medarbejder(self):
         k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
