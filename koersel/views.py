@@ -289,6 +289,20 @@ def godkend(request, pk):
 
 
 @login_required
+def grundlag(request, pk, resultat):
+    koersel = get_object_or_404(Koersel, pk=pk)
+    beregning = koersel.aktiv_beregning
+    if beregning is None:
+        raise Http404
+    r = get_object_or_404(beregning.resultater, pk=resultat)
+    r.detaljer_data = r.detaljer
+    inp = r.detaljer_data["input"]
+    r.transport_navn = TRANSPORT_NAVNE.get(inp["transport"], "-")
+    r.timer_tekst = hhmm(inp["minutter"])
+    return render(request, "koersel/grundlag.html", {"koersel": koersel, "beregning": beregning, "r": r})
+
+
+@login_required
 def rapport(request, pk):
     beregning = get_object_or_404(Beregningskoersel, pk=pk)
     if not beregning.pdf:
