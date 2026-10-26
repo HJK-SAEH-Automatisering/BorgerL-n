@@ -368,9 +368,10 @@ class FlowTests(TestCase):
             # Rækken med totaler
             self.assertNotContains(svar, 'class="tiles"')
             self.assertNotContains(svar, 'class="tile"')
-            self.assertNotContains(svar, "Løn efter skat")
-            self.assertNotContains(svar, "Træk (lønart 991)")
-            self.assertNotContains(svar, "Udbetaling (lønart 991)")
+            # Etiketterne må ikke stå som tile-etiketter; teksterne står i øvrigt
+            # i beregningsgrundlaget pr. borger, som skal blive.
+            for etiket in ("Borgere", "Løn før skat", "Løn efter skat", "Træk (lønart 991)", "Udbetaling (lønart 991)"):
+                self.assertNotContains(svar, f'<div class="l">{etiket}</div>')
             # Det der bliver
             self.assertContains(svar, f"Godkend beregning · {k.navn}")
             self.assertContains(svar, f"Åbn PDF-rapport {b.rapport_id}")
