@@ -467,6 +467,34 @@ class FlowTests(TestCase):
         # Knappen står stadig, også når borgeren er godkendt
         self.assertContains(svar, "Godkendt")
 
+    def test_godkend_og_beregningsgrundlag_staar_i_samme_celle_med_godkend_foerst(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        url = reverse("godkend", args=[k.pk])
+
+        def celler(svar):
+            html = svar.content.decode()
+            # Hver celle går fra sin åbning til næste celle (eller rækkens slutning)
+            dele = html.split('<div class="knapper">')[1:]
+            return [d.split("</div>")[0] for d in dele]
+
+        # Ikke godkendt: begge knapper i samme celle, og "Beregningsgrundlag" efter "Godkend"
+        udfald = celler(self.client.get(url))
+        self.assertEqual(len(udfald), 2)
+        for celle in udfald:
+            self.assertEqual(celle.count(">Godkend</button>"), 1)
+            self.assertEqual(celle.count(">Beregningsgrundlag</a>"), 1)
+            self.assertLess(celle.index(">Godkend</button>"), celle.index(">Beregningsgrundlag</a>"))
+
+        # Godkendt: cellen står stadig, men kun med "Beregningsgrundlag"
+        self.client.post(url, {"handling": "godkend_alle"})
+        udfald = celler(self.client.get(url))
+        self.assertEqual(len(udfald), 2)
+        for celle in udfald:
+            self.assertNotIn(">Godkend</button>", celle)
+            self.assertNotIn("<form", celle)
+            self.assertEqual(celle.count(">Beregningsgrundlag</a>"), 1)
+
     def test_beregningsgrundlag_viser_borger_og_tabel_uden_cpr_og_adresse(self):
         self.p1.adresse = "Fiktiv Vej 1, 9000 Testby"
         self.p1.save()
