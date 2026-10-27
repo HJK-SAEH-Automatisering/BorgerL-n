@@ -930,6 +930,220 @@ class FlowTests(TestCase):
         self.assertEqual(self.client.get(reverse("eksport", args=[k.pk])).status_code, 302)
         self.assertTrue(k.beregninger.get(nummer=1).pdf)
 
+    FORAELDET = "Beregningen er forældet."
+    FORAELDET_BESKED = "Beregningen er forældet. Der er ændret noget, siden den blev kørt. Kør Beregn igen under Undtagelser, før du kan godkende."
+    FORAELDET_KNAP = "Beregningen er forældet. Kør Beregn igen."
+
+    def _beregnet(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.BEREGNET)
+        return k
+
+    def _gem_og_fortsaet(self, k):
+        data = {"handling": "gem"}
+        for l in k.linjer.select_related("borger"):
+            data.update({f"afstand_{l.pk}": str(l.borger.afstand_km), f"transport_{l.pk}": l.transport})
+        return self.client.post(reverse("gennemse", args=[k.pk]), data)
+
+    def _top_og_raekker(self, k):
+        return self._raekker_og_top(reverse("godkend", args=[k.pk]))
+
+    def _tjek_foraeldet_skaerm(self, k):
+        url = reverse("godkend", args=[k.pk])
+        b = k.aktiv_beregning
+        svar = self.client.get(url)
+        self.assertContains(svar, self.FORAELDET)
+        self.assertContains(svar, "Der er ændret noget, siden den blev kørt. Kør Beregn igen under")
+        self.assertContains(svar, f'<a href="{reverse("undtagelser", args=[k.pk])}">Undtagelser</a>')
+        top, raekker = self._top_og_raekker(k)
+        # Godkend alle og alle rækkeknapper: ikke trykbare, ikke grønne, med forklaring
+        self.assertNotIn('value="godkend_alle"', top)
+        self.assertNotIn('class="godkendt"', top)
+        self.assertNotIn('class="godkendt"', raekker)
+        self.assertNotIn('value="godkend"', raekker)
+        self.assertEqual(raekker.count(f'<button type="button" disabled title="{self.FORAELDET_KNAP}" aria-label="{self.FORAELDET_KNAP}">Godkend</button>'), 2)
+        self.assertIn(f'<button type="button" disabled title="{self.FORAELDET_KNAP}" aria-label="{self.FORAELDET_KNAP}">Godkend alle</button>', top)
+        # Eksport og PDF: ikke trykbare, ingen adresser
+        for tekst in ("Eksportér lønudtræk (CSV)", f"Åbn PDF-rapport {b.rapport_id}"):
+            self.assertIn(f'<button type="button" disabled title="{self.FORAELDET_KNAP}" aria-label="{self.FORAELDET_KNAP}">{tekst}</button>', top)
+        self.assertNotIn(reverse("eksport", args=[k.pk]), top)
+        self.assertNotIn(reverse("rapport", args=[b.pk]), top)
+        # Genåbn og Beregningsgrundlag kan stadig trykkes
+        self.assertRegex(top, r'value="genaabn".*?<button type="submit">Genåbn til rettelser</button>')
+        for r in b.resultater.all():
+            self.assertIn(f'<a class="btn" href="{reverse("grundlag", args=[k.pk, r.pk])}"', raekker)
+
+    def _tjek_godkendelse_afvist(self, k):
+        url = reverse("godkend", args=[k.pk])
+        b = k.aktiv_beregning
+        foer_status = Koersel.objects.get(pk=k.pk).status
+        antal_logs = AuditLog.objects.filter(handling="Godkendte beregning").count()
+        r1 = b.resultater.order_by("pk").first()
+        for data in ({"handling": "godkend", "resultat": r1.pk}, {"handling": "godkend_alle"}, {"handling": "godkend", "resultat": ""}):
+            svar = self.client.post(url, data, follow=True)
+            self.assertRedirects(svar, url)
+            self.assertContains(svar, self.FORAELDET_BESKED)
+            self.assertNotContains(svar, "medarbejder(e) godkendt")
+            self.assertEqual(b.resultater.filter(godkendt=True).count(), 0)
+            self.assertEqual(Koersel.objects.get(pk=k.pk).status, foer_status)
+        self.assertEqual(AuditLog.objects.filter(handling="Godkendte beregning").count(), antal_logs)
+        self.assertFalse(services.kan_eksportere(k))
+        self.assertRedirects(self.client.get(reverse("eksport", args=[k.pk])), url)
+        self.assertEqual(k.aktiv_beregning.pk, b.pk)
+
+    def test_ny_upload_efter_genaabning_goer_beregningen_foraeldet(self):
+        k = self._beregnet()
+        url = reverse("godkend", args=[k.pk])
+        self.client.post(url, {"handling": "godkend_alle"})
+        self.client.post(url, {"handling": "genaabn"})
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.BEREGNET)
+        self.assertFalse(k.beregning_foraeldet)
+
+        self.client.post(reverse("upload", args=[k.pk]), {"fil": xlsx([("Person 1", "1:00"), ("Person 2", "2:00")], navn="ny.xlsx")})
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.KLADDE)
+        self.assertTrue(k.beregning_foraeldet)
+        self._tjek_foraeldet_skaerm(k)
+        self._tjek_godkendelse_afvist(k)
+
+    def test_gem_kladde_efter_beregning_goer_beregningen_foraeldet(self):
+        k = self._beregnet()
+        svar = self.undtagelser(k, handling="gem")
+        self.assertRedirects(svar, reverse("undtagelser", args=[k.pk]))
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.KLADDE)
+        self.assertTrue(k.beregning_foraeldet)
+        self._tjek_foraeldet_skaerm(k)
+        self._tjek_godkendelse_afvist(k)
+
+    def test_gem_og_fortsaet_efter_beregning_goer_beregningen_foraeldet(self):
+        k = self._beregnet()
+        svar = self._gem_og_fortsaet(k)
+        self.assertRedirects(svar, reverse("undtagelser", args=[k.pk]))
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.KLADDE)
+        self._tjek_foraeldet_skaerm(k)
+        self._tjek_godkendelse_afvist(k)
+
+    def test_fortsaet_uden_at_gemme_goer_ikke_beregningen_foraeldet(self):
+        k = self._beregnet()
+        svar = self.client.post(reverse("gennemse", args=[k.pk]), {"handling": "fortsaet"})
+        self.assertRedirects(svar, reverse("undtagelser", args=[k.pk]))
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.BEREGNET)
+        self.assertNotContains(self.client.get(reverse("godkend", args=[k.pk])), self.FORAELDET)
+
+    def test_afvist_beregn_med_gemte_rettelser_goer_beregningen_foraeldet(self):
+        k = self._beregnet()
+        l = k.linjer.get(fil_navn="Person 1")
+        svar = self.undtagelser(k, **{f"z_{l.pk}": ""})
+        self.assertEqual(svar.status_code, 200)
+        self.assertEqual(k.aktiv_beregning.nummer, 1)
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.KLADDE)
+        self._tjek_foraeldet_skaerm(k)
+        self._tjek_godkendelse_afvist(k)
+
+    def test_afklar_efter_beregning_goer_beregningen_foraeldet(self):
+        k = self._beregnet()
+        l = k.linjer.get(fil_navn="Person 1")
+        self.client.post(reverse("gennemse", args=[k.pk]), {"handling": "afklar", "linje": l.pk, "borger": self.p3.pk})
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.KLADDE)
+        self._tjek_godkendelse_afvist(k)
+
+    def test_afklar_med_ugyldigt_valg_aendrer_ikke_status(self):
+        k = self._beregnet()
+        l = k.linjer.get(fil_navn="Person 1")
+        self.client.post(reverse("gennemse", args=[k.pk]), {"handling": "afklar", "linje": l.pk, "borger": ""})
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.BEREGNET)
+
+    def test_genaabn_og_beregningsgrundlag_virker_naar_beregningen_er_foraeldet(self):
+        k = self._beregnet()
+        url = reverse("godkend", args=[k.pk])
+        self.client.post(url, {"handling": "godkend", "resultat": k.aktiv_beregning.resultater.order_by("pk").first().pk})
+        self.undtagelser(k, handling="gem")
+        r = k.aktiv_beregning.resultater.order_by("pk").first()
+        self.assertEqual(self.client.get(reverse("grundlag", args=[k.pk, r.pk])).status_code, 200)
+        svar = self.client.post(url, {"handling": "genaabn"}, follow=True)
+        self.assertRedirects(svar, url)
+        self.assertContains(svar, "Kørslen er genåbnet. 1 godkendelse er fjernet. Godkend igen, eller ret oplysningerne under Undtagelser og kør en ny beregning.")
+        self.assertEqual(k.aktiv_beregning.resultater.filter(godkendt=True).count(), 0)
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.KLADDE)
+        self._tjek_foraeldet_skaerm(k)
+
+    def test_ny_beregn_goer_en_foraeldet_beregning_aktuel_igen(self):
+        k = self._beregnet()
+        self.undtagelser(k, handling="gem")
+        k.refresh_from_db()
+        self.assertTrue(k.beregning_foraeldet)
+        svar = self.undtagelser(k)
+        self.assertRedirects(svar, reverse("godkend", args=[k.pk]))
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.BEREGNET)
+        self.assertFalse(k.beregning_foraeldet)
+        self.assertEqual(k.aktiv_beregning.nummer, 2)
+        url = reverse("godkend", args=[k.pk])
+        svar = self.client.get(url)
+        self.assertNotContains(svar, self.FORAELDET)
+        top, raekker = self._top_og_raekker(k)
+        self.assertIn('value="godkend_alle"', top)
+        self.assertEqual(raekker.count('<button type="submit">Godkend</button>'), 2)
+        self.assertIn("Kan først bruges, når alle medarbejdere er godkendt.", top)
+        self.assertNotIn(self.FORAELDET_KNAP, top + raekker)
+        # Godkend, og eksport og PDF åbner
+        svar = self.client.post(url, {"handling": "godkend_alle"}, follow=True)
+        self.assertContains(svar, "2 medarbejder(e) godkendt.")
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.GODKENDT)
+        self.assertTrue(services.kan_eksportere(k))
+        self.assertEqual(self.client.get(reverse("eksport", args=[k.pk])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("rapport", args=[k.aktiv_beregning.pk])).status_code, 200)
+
+    def test_en_koersel_gaar_aldrig_fra_kladde_til_godkendt(self):
+        k = self._beregnet()
+        self.undtagelser(k, handling="gem")
+        b = k.aktiv_beregning
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.KLADDE)
+        with self.assertRaises(services.BeregningForaeldet):
+            services.godkend(b, self.bruger)
+        with self.assertRaises(services.BeregningForaeldet):
+            services.godkend(b, self.bruger, b.resultater.first().pk)
+        # Også når alle resultater allerede står som godkendt, skifter status ikke af sig selv
+        b.resultater.update(godkendt=True)
+        self.assertFalse(services.kan_eksportere(k))
+        self.assertRedirects(self.client.get(reverse("eksport", args=[k.pk])), reverse("godkend", args=[k.pk]))
+        self.client.post(reverse("godkend", args=[k.pk]), {"handling": "godkend_alle"})
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.KLADDE)
+
+    def test_ikke_foraeldet_beregning_virker_som_foer(self):
+        k = self._beregnet()
+        url = reverse("godkend", args=[k.pk])
+        svar = self.client.get(url)
+        self.assertNotContains(svar, self.FORAELDET)
+        self.assertNotContains(svar, "forældet")
+        svar = self.client.post(url, {"handling": "godkend", "resultat": k.aktiv_beregning.resultater.order_by("pk").first().pk}, follow=True)
+        self.assertContains(svar, "1 medarbejder(e) godkendt.")
+        svar = self.client.post(url, {"handling": "godkend_alle"}, follow=True)
+        self.assertContains(svar, "1 medarbejder(e) godkendt.")
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.GODKENDT)
+
+    def test_kladde_uden_beregning_er_ikke_foraeldet(self):
+        k = self.opret_og_upload([("Person 1", "44:12")])
+        self.assertFalse(k.beregning_foraeldet)
+        self.undtagelser(k, handling="gem")
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.KLADDE)
+        self.assertFalse(k.beregning_foraeldet)
+
     def test_ingen_skaerm_indeholder_ordet_borger(self):
         def tjek(svar, hvad):
             self.assertEqual(svar.status_code, 200, hvad)
