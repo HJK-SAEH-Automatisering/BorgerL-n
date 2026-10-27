@@ -92,6 +92,8 @@ Det kræver adgang til nettet og rører hverken andre pakker eller sikkerhedstje
 Til sidst kontrollerer det, at Django kan startes. Med `--tjek` bagefter kommandoen melder det
 kun, hvad der er galt, uden at ændre noget. Filen kan blive sat i karantæne igen. Kør i så fald
 scriptet igen.
+Melder scriptet en fejl, fx fordi selve pakkeværktøjet er ramt, slettes `.venv`, og den bygges
+forfra med de tre første linjer under "Kom i gang".
 
 ### Kontrol af en gemt rapport
 

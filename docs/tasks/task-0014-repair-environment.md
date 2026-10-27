@@ -2,7 +2,7 @@
 nummer: task-0014
 titel: Reparationsscript, der gendanner pakker i .venv, som sikkerhedstjenesten har sat i karantæne
 kilde: interview
-status: i-gang
+status: afsluttet
 oprettet: 2026-10-27
 ---
 
