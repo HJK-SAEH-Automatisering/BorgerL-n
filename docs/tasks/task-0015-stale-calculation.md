@@ -2,7 +2,7 @@
 nummer: task-0015
 titel: En forældet beregning kan ikke godkendes eller eksporteres
 kilde: test-0004
-status: i-gang
+status: afsluttet
 oprettet: 2026-10-27
 ---
 

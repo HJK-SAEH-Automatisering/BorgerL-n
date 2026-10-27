@@ -53,6 +53,7 @@ ellers fyldes `docs/tasks/` med halve idéer.>
 | task-0012 | Rækkerne på Godkend-skærmen skifter ikke plads, når nogle er godkendt | bygget |
 | task-0013 | Knapperne øverst på Godkend-skærmen i ny rækkefølge, med PDF og eksport låst til alle er godkendt | bygget |
 | task-0014 | Reparationsscript, der gendanner pakker i .venv, som sikkerhedstjenesten har sat i karantæne | bygget |
+| task-0015 | En forældet beregning kan ikke godkendes eller eksporteres | bygget |
 
 <`Udfald` er `bygget` eller `afvist`. Flyt hertil når architect har vurderet
 opgaven — ikke når udrulningen er sket; udrulning er ikke en status.
