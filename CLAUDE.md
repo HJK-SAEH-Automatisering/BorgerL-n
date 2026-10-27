@@ -32,7 +32,14 @@ modellen `Borger`, tabellerne, skabelonfilerne `borger_*.html`, visningerne og a
 .venv\Scripts\python.exe manage.py makemigrations
 .venv\Scripts\python.exe manage.py seed_demo
 .venv\Scripts\python.exe manage.py verificer_rapport 2026-10-001
+.venv\Scripts\python.exe scripts\reparer_miljo.py
+.venv\Scripts\python.exe scripts\reparer_miljo.py --tjek
+.venv\Scripts\python.exe -m unittest scripts.test_reparer_miljo
 ```
+
+`reparer_miljo.py` geninstallerer pakker i `.venv`, hvis en sikkerhedstjeneste har erstattet en
+fil med en karantænetekst (`*.py.txt`), så Django ikke starter. `--tjek` melder kun. Scriptet
+bruger kun standardbiblioteket; dets tests kan også køres uden Django med den sidste linje.
 
 `seed_demo` opretter fiktive medarbejdere, en demobruger og `eksempel/punchly-eksempel.xlsx`.
 Byg, formatering og linter er ikke sat op.
@@ -51,6 +58,7 @@ Nøglerne står i `.env.example`.
 | `stamdata/` | `ZonePris` (versioneret pr. dato) og `Parameter`. Seedet af en migrering |
 | `koersel/` | Månedlig kørsel: import, de fire skærme, `services.py`, godkendelse og CSV-eksport |
 | `audit/` | `AuditLog` |
+| `scripts/` | `reparer_miljo.py` (gendanner pakker i `.venv`, kun standardbiblioteket) og dets tests |
 | `templates/`, `static/` | Skabeloner, CSS og JS |
 | `docs/` | Dokumentation og rollernes papirspor |
 
