@@ -21,6 +21,7 @@ from audit.models import AuditLog
 from beregning.pdf import LAYOUT_VERSION, lav_rapport
 from register.models import Borger
 
+from . import services
 from .importer import ImportFejl, laes_timefil
 from .models import Koersel, Linje
 
@@ -535,6 +536,133 @@ class FlowTests(TestCase):
         laast(t, pdf_tekst)
         genaabn_er_aktiv(t)
         self.assertRedirects(self.client.get(eksport_url), url)
+
+    def _raekker_og_top(self, url):
+        html = self.client.get(url).content.decode()
+        start = html.index('<div class="actions"')
+        midt = html.index("<h2>Beregning pr. medarbejder</h2>", start)
+        slut = html.index("<h2>Tidligere beregninger for måneden</h2>", midt)
+        return html[start:midt], html[midt:slut]
+
+    def test_genaabn_fra_helt_godkendt_koersel_fjerner_alle_godkendelser_og_laaser_eksport_og_pdf(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        url = reverse("godkend", args=[k.pk])
+        b = k.aktiv_beregning
+        self.client.post(url, {"handling": "godkend_alle"})
+        self.assertEqual(b.resultater.filter(godkendt=True).count(), 2)
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.GODKENDT)
+
+        svar = self.client.post(url, {"handling": "genaabn"}, follow=True)
+        self.assertRedirects(svar, reverse("undtagelser", args=[k.pk]))
+        self.assertContains(svar, "Kørslen er genåbnet. 2 godkendelser er fjernet.")
+
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.BEREGNET)
+        self.assertEqual(b.resultater.count(), 2)
+        for r in b.resultater.all():
+            self.assertFalse(r.godkendt)
+            self.assertIsNone(r.godkendt_af)
+            self.assertIsNone(r.godkendt_tidspunkt)
+        self.assertFalse(services.kan_eksportere(k))
+        # Samme beregning, ingen ny
+        self.assertEqual(k.beregninger.count(), 1)
+        self.assertRedirects(self.client.get(reverse("eksport", args=[k.pk])), url)
+
+        # Godkend-skærmen: ingen grønne rækkeknapper, Godkend alle er aktiv, PDF og eksport er låst
+        top, raekker = self._raekker_og_top(url)
+        self.assertNotIn('class="godkendt"', raekker)
+        self.assertEqual(raekker.count('<button type="submit">Godkend</button>'), 2)
+        self.assertIn('value="godkend_alle"', top)
+        self.assertNotIn('class="godkendt"', top)
+        self.assertNotRegex(top, r'<a class="btn" href="' + re.escape(reverse("eksport", args=[k.pk])))
+        self.assertNotRegex(top, r'<a class="btn" href="' + re.escape(reverse("rapport", args=[b.pk])))
+        self.assertIn("Kan først bruges, når alle medarbejdere er godkendt.", top)
+
+        # Man kan godkende igen uden ny beregning
+        self.client.post(url, {"handling": "godkend_alle"})
+        k.refresh_from_db()
+        self.assertTrue(services.kan_eksportere(k))
+
+    def test_genaabn_fra_delvist_godkendt_koersel_fjerner_de_givne_godkendelser(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        url = reverse("godkend", args=[k.pk])
+        b = k.aktiv_beregning
+        self.client.post(url, {"handling": "godkend", "resultat": b.resultater.order_by("pk").first().pk})
+        self.assertEqual(b.resultater.filter(godkendt=True).count(), 1)
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.BEREGNET)
+
+        svar = self.client.post(url, {"handling": "genaabn"}, follow=True)
+        self.assertRedirects(svar, reverse("undtagelser", args=[k.pk]))
+        self.assertContains(svar, "Kørslen er genåbnet. 1 godkendelse er fjernet.")
+        self.assertEqual(b.resultater.filter(godkendt=True).count(), 0)
+        self.assertEqual(b.resultater.filter(godkendt_af__isnull=False).count(), 0)
+        self.assertEqual(b.resultater.filter(godkendt_tidspunkt__isnull=False).count(), 0)
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.BEREGNET)
+
+        top, raekker = self._raekker_og_top(url)
+        self.assertNotIn('class="godkendt"', raekker)
+        self.assertEqual(raekker.count('<button type="submit">Godkend</button>'), 2)
+        self.assertIn('value="godkend_alle"', top)
+
+    def test_genaabn_skriver_antal_fjernede_godkendelser_i_auditloggen(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        url = reverse("godkend", args=[k.pk])
+        self.client.post(url, {"handling": "godkend_alle"})
+        self.client.post(url, {"handling": "genaabn"})
+        post = AuditLog.objects.get(handling="Genåbnede kørsel")
+        self.assertEqual(post.bruger, self.bruger)
+        self.assertEqual(post.objekt_type, "Koersel")
+        self.assertEqual(post.objekt_id, str(k.pk))
+        self.assertIn("fjernede godkendelser: 2", post.detaljer)
+
+        # Delvist godkendt: også med antallet
+        self.undtagelser(k)
+        b = k.aktiv_beregning
+        self.client.post(url, {"handling": "godkend", "resultat": b.resultater.order_by("pk").first().pk})
+        self.client.post(url, {"handling": "genaabn"})
+        seneste = AuditLog.objects.filter(handling="Genåbnede kørsel").first()
+        self.assertIn("fjernede godkendelser: 1", seneste.detaljer)
+
+    def test_genaabn_uden_godkendelser_aendrer_ingenting_og_giver_ingen_fejl(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        url = reverse("godkend", args=[k.pk])
+        b = k.aktiv_beregning
+        antal_logs = AuditLog.objects.count()
+        svar = self.client.post(url, {"handling": "genaabn"}, follow=True)
+        self.assertRedirects(svar, reverse("undtagelser", args=[k.pk]))
+        self.assertNotContains(svar, "genåbnet")
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.BEREGNET)
+        self.assertEqual(b.resultater.filter(godkendt=False).count(), 2)
+        self.assertEqual(AuditLog.objects.count(), antal_logs)
+        self.assertFalse(AuditLog.objects.filter(handling="Genåbnede kørsel").exists())
+
+    def test_genaabn_foer_en_beregning_er_koert_giver_ingen_fejl(self):
+        k = self.opret_og_upload([("Person 1", "44:12")])
+        svar = self.client.post(reverse("godkend", args=[k.pk]), {"handling": "genaabn"})
+        self.assertRedirects(svar, reverse("undtagelser", args=[k.pk]))
+        self.assertFalse(AuditLog.objects.filter(handling="Genåbnede kørsel").exists())
+
+    def test_genaabn_kraever_login(self):
+        k = self.opret_og_upload([("Person 1", "44:12")])
+        self.undtagelser(k)
+        url = reverse("godkend", args=[k.pk])
+        self.client.post(url, {"handling": "godkend_alle"})
+        self.client.logout()
+        svar = self.client.post(url, {"handling": "genaabn"})
+        self.assertEqual(svar.status_code, 302)
+        self.assertIn("/konto/login/", svar["Location"])
+        # Intet er fjernet
+        self.assertEqual(k.aktiv_beregning.resultater.filter(godkendt=True).count(), 1)
+        k.refresh_from_db()
+        self.assertEqual(k.status, Koersel.Status.GODKENDT)
 
     def test_godkend_skaermen_har_ikke_knappen_tilbage_til_undtagelser_men_trinsoejlen_linker_dertil(self):
         k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])

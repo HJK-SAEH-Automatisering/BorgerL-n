@@ -255,10 +255,11 @@ def godkend(request, pk):
 
     if request.method == "POST":
         if request.POST.get("handling") == "genaabn":
-            if koersel.status == Koersel.Status.GODKENDT:
-                koersel.status = Koersel.Status.BEREGNET
-                koersel.save(update_fields=["status"])
-                log(request.user, "Genåbnede godkendt kørsel", koersel, koersel.navn)
+            antal, var_godkendt = services.genaabn(beregning, request.user)
+            if antal:
+                fjernet = "1 godkendelse er" if antal == 1 else f"{antal} godkendelser er"
+                messages.info(request, f"Kørslen er genåbnet. {fjernet} fjernet. Ret oplysningerne og kør en ny beregning, eller godkend igen.")
+            elif var_godkendt:
                 messages.info(request, "Kørslen er genåbnet. Ret oplysningerne og kør en ny beregning, eller godkend igen.")
             return redirect("undtagelser", pk=pk)
         if koersel.status == Koersel.Status.GODKENDT:

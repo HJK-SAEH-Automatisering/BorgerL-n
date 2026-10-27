@@ -258,6 +258,23 @@ def godkend(beregning: Beregningskoersel, bruger, resultat_id: int | None = None
     return antal
 
 
+@transaction.atomic
+def genaabn(beregning: Beregningskoersel, bruger) -> tuple[int, bool]:
+    """Fjerner alle godkendelser på beregningen og sætter en godkendt kørsel tilbage til beregnet.
+
+    Returnerer antal fjernede godkendelser og om kørslen var godkendt. Har det ingen virkning,
+    ændres og logges intet."""
+    koersel = beregning.koersel
+    var_godkendt = koersel.status == Koersel.Status.GODKENDT
+    antal = beregning.resultater.filter(godkendt=True).update(godkendt=False, godkendt_af=None, godkendt_tidspunkt=None)
+    if var_godkendt:
+        koersel.status = Koersel.Status.BEREGNET
+        koersel.save(update_fields=["status"])
+    if var_godkendt or antal:
+        log(bruger, "Genåbnede kørsel", koersel, f"{koersel.navn}, fjernede godkendelser: {antal}")
+    return antal, var_godkendt
+
+
 def kan_eksportere(koersel: Koersel) -> bool:
     b = koersel.aktiv_beregning
     return bool(b and b.alle_godkendt and koersel.status == Koersel.Status.GODKENDT)
