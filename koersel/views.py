@@ -99,6 +99,7 @@ def gennemse(request, pk):
             else:
                 linje.saet_borger(borger)
                 linje.save()
+                services.goer_foraeldet(koersel)
                 log(request.user, "Afklarede navnematch", linje, f"'{linje.fil_navn}' -> {borger.navn}")
             return redirect("gennemse", pk=pk)
         if services.uafklarede(koersel).exists():
@@ -132,6 +133,7 @@ def gennemse(request, pk):
                     else:
                         linje.zoner = b.zoner
                 linje.save()
+            services.goer_foraeldet(koersel)
             if fejl:
                 messages.error(request, "Ret afstand og transport for: " + ", ".join(fejl))
                 return redirect(f"{request.path}?ret=1")
@@ -204,6 +206,7 @@ def undtagelser(request, pk):
     afvist = False
     if request.method == "POST":
         _laes_undtagelser(request, koersel)
+        services.goer_foraeldet(koersel)
         if request.POST.get("handling") == "beregn":
             try:
                 beregning = services.koer_beregning(koersel, request.user)
@@ -258,14 +261,18 @@ def godkend(request, pk):
             antal, var_godkendt = services.genaabn(beregning, request.user)
             if antal:
                 fjernet = "1 godkendelse er" if antal == 1 else f"{antal} godkendelser er"
-                messages.info(request, f"Kørslen er genåbnet. {fjernet} fjernet. Godkend igen, eller ret oplysningerne under Undtagelser.")
+                messages.info(request, f"Kørslen er genåbnet. {fjernet} fjernet. Godkend igen, eller ret oplysningerne under Undtagelser og kør en ny beregning.")
             elif var_godkendt:
-                messages.info(request, "Kørslen er genåbnet. Godkend igen, eller ret oplysningerne under Undtagelser.")
+                messages.info(request, "Kørslen er genåbnet. Godkend igen, eller ret oplysningerne under Undtagelser og kør en ny beregning.")
             return redirect("godkend", pk=pk)
         if koersel.status == Koersel.Status.GODKENDT:
             return redirect("godkend", pk=pk)
         resultat_id = request.POST.get("resultat")
-        antal = services.godkend(beregning, request.user, int(resultat_id) if resultat_id else None)
+        try:
+            antal = services.godkend(beregning, request.user, int(resultat_id) if resultat_id else None)
+        except services.BeregningForaeldet as e:
+            messages.error(request, str(e))
+            return redirect("godkend", pk=pk)
         messages.success(request, f"{antal} medarbejder(e) godkendt." if antal else "Intet at godkende.")
         return redirect("godkend", pk=pk)
 
@@ -285,6 +292,7 @@ def godkend(request, pk):
             beregning=beregning,
             resultater=resultater,
             kan_eksportere=services.kan_eksportere(koersel),
+            foraeldet=koersel.beregning_foraeldet,
             historik=koersel.beregninger.select_related("bruger"),
         ),
     )

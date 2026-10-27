@@ -43,6 +43,11 @@ class Koersel(models.Model):
     def aktiv_beregning(self):
         return self.beregninger.order_by("-nummer").first()
 
+    @property
+    def beregning_foraeldet(self) -> bool:
+        """Der findes en beregning, men noget er uploadet eller gemt, siden den blev kørt."""
+        return self.status == self.Status.KLADDE and self.beregninger.exists()
+
 
 class Linje(models.Model):
     class Match(models.TextChoices):

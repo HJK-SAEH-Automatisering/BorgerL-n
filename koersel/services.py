@@ -26,6 +26,19 @@ class BeregningsFejl(Exception):
         super().__init__("Beregningen kan ikke køres.")
 
 
+class BeregningForaeldet(Exception):
+    def __init__(self):
+        super().__init__("Beregningen er forældet. Der er ændret noget, siden den blev kørt. Kør Beregn igen under Undtagelser, før du kan godkende.")
+
+
+def goer_foraeldet(koersel: Koersel) -> None:
+    """Sætter en beregnet kørsel tilbage til kladde, så den beregning der findes, er forældet.
+
+    Kaldes, når noget er gemt efter en beregning. En ny beregning gør den aktuel igen."""
+    if Koersel.objects.filter(pk=koersel.pk, status=Koersel.Status.BEREGNET).update(status=Koersel.Status.KLADDE):
+        koersel.status = Koersel.Status.KLADDE
+
+
 def opret_linjer(koersel: Koersel, raekker: list[Raekke], filnavn: str, bruger=None) -> None:
     antal_pr_navn = Counter(normaliser_navn(r.navn) for r in raekker)
     borgere_pr_navn: dict[str, list[Borger]] = {}
@@ -247,14 +260,16 @@ def koer_beregning(koersel: Koersel, bruger) -> Beregningskoersel:
 def godkend(beregning: Beregningskoersel, bruger, resultat_id: int | None = None) -> int:
     if not beregning.er_aktiv:
         raise ValueError("Kun den nyeste beregning kan godkendes.")
-    qs = beregning.resultater.filter(godkendt=False)
+    if Koersel.objects.filter(pk=beregning.koersel_id, status=Koersel.Status.KLADDE).exists():
+        raise BeregningForaeldet()
+    qs =beregning.resultater.filter(godkendt=False)
     if resultat_id is not None:
         qs = qs.filter(pk=resultat_id)
     antal = qs.update(godkendt=True, godkendt_af=bruger, godkendt_tidspunkt=timezone.now())
     if antal:
         log(bruger, "Godkendte beregning", beregning, f"{antal} linjer, rapport {beregning.rapport_id}")
     if beregning.alle_godkendt:
-        Koersel.objects.filter(pk=beregning.koersel_id).update(status=Koersel.Status.GODKENDT)
+        Koersel.objects.filter(pk=beregning.koersel_id, status=Koersel.Status.BEREGNET).update(status=Koersel.Status.GODKENDT)
     return antal
 
 

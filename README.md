@@ -30,7 +30,9 @@ Adressen til appen får du af den, der driver den. Hver måned går du fire trin
    "Godkend alle", "Genåbn til rettelser", "Eksportér lønudtræk (CSV)" og "Åbn PDF-rapport".
    Eksport og PDF kan først bruges, når alle er godkendt. Skal noget rettes bagefter, trykker du på
    "Genåbn til rettelser". Så fjernes alle godkendelser, og du kan godkende igen eller rette
-   oplysningerne under Undtagelser.
+   oplysningerne under Undtagelser. Har du uploadet en ny fil eller gemt rettelser, efter at du
+   trykkede "Beregn", er beregningen forældet. Godkend-skærmen siger det, og intet kan godkendes,
+   eksporteres eller åbnes som PDF, før du har trykket "Beregn" igen under Undtagelser.
 
 Hver gang du trykker "Beregn", gemmes en PDF-rapport med udregningen for hver medarbejder, uden
 CPR-nummer og adresse. Rapporterne kan ikke ændres, og gamle rapporter slettes aldrig. Trykker
