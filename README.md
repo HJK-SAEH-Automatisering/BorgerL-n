@@ -77,6 +77,22 @@ databasen sættes op med nøglerne `DB_ENGINE=mssql`, `DB_NAME`, `DB_HOST`, `DB_
 
 MSSQL er endnu ikke afprøvet mod en rigtig server.
 
+### Når appen pludselig ikke starter
+
+Starter appen ikke, og fejlen lyder fx "No module named 'django.utils.cache'", er en fil i
+det virtuelle miljø (mappen `.venv`) blevet erstattet af en tekstfil om karantæne fra en
+sikkerhedstjeneste på maskinen. Kør fra projektmappen:
+
+```powershell
+.venv\Scripts\python.exe scripts\reparer_miljo.py
+```
+
+Scriptet finder de pakker, hvor en fil er erstattet, og installerer dem igen i samme udgave.
+Det kræver adgang til nettet og rører hverken andre pakker eller sikkerhedstjenesten.
+Til sidst kontrollerer det, at Django kan startes. Med `--tjek` bagefter kommandoen melder det
+kun, hvad der er galt, uden at ændre noget. Filen kan blive sat i karantæne igen. Kør i så fald
+scriptet igen.
+
 ### Kontrol af en gemt rapport
 
 Den gemte PDF er selve beviset på en beregning. Den kan kontrolleres for ændringer med
