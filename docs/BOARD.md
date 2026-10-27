@@ -21,6 +21,7 @@ en rapport der har stået her i dagevis, er et fund på vej til at blive glemt.>
 
 | Nr. | Titel | Status | Kilde |
 |---|---|---|---|
+| task-0014 | Reparationsscript, der gendanner pakker i .venv, som sikkerhedstjenesten har sat i karantæne | planlagt | interview |
 
 <`Status` er `planlagt`, `i-gang` eller `afsluttet`. `Kilde` er `interview`
 eller nummeret på den rapport opgaven kom af.>
@@ -51,6 +52,7 @@ ellers fyldes `docs/tasks/` med halve idéer.>
 | task-0010 | Fjern knappen Tilbage til undtagelser på Godkend-skærmen | bygget |
 | task-0011 | Få browseren til at hente nyt stylesheet og ny skærmkode, når de ændres | bygget |
 | task-0012 | Rækkerne på Godkend-skærmen skifter ikke plads, når nogle er godkendt | bygget |
+| task-0013 | Knapperne øverst på Godkend-skærmen i ny rækkefølge, med PDF og eksport låst til alle er godkendt | bygget |
 
 <`Udfald` er `bygget` eller `afvist`. Flyt hertil når architect har vurderet
 opgaven — ikke når udrulningen er sket; udrulning er ikke en status.

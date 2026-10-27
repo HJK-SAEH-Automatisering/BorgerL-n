@@ -26,8 +26,11 @@ Adressen til appen får du af den, der driver den. Hver måned går du fire trin
    dem. Du kan rette tallet. Mangler en medarbejder oplysninger, når du trykker "Beregn", rulles siden til den første
    række, der mangler noget.
 4. **Godkend.** Ud for hver medarbejder er der en knap, "Beregningsgrundlag", som åbner en side i en
-   ny fane med udregningen trin for trin. Du kan godkende en ad gangen eller alle på én gang. Først når alle er godkendt, kan du hente lønudtrækket (CSV).
-   Skal noget rettes bagefter, genåbner du kørslen.
+   ny fane med udregningen trin for trin. Du kan godkende en ad gangen eller alle på én gang. Knapperne øverst står fra venstre:
+   "Godkend alle", "Genåbn til rettelser", "Eksportér lønudtræk (CSV)" og "Åbn PDF-rapport".
+   Eksport og PDF kan først bruges, når alle er godkendt. Skal noget rettes bagefter, trykker du på
+   "Genåbn til rettelser". Så fjernes alle godkendelser, og du kan godkende igen eller rette
+   oplysningerne under Undtagelser.
 
 Hver gang du trykker "Beregn", gemmes en PDF-rapport med udregningen for hver medarbejder, uden
 CPR-nummer og adresse. Rapporterne kan ikke ændres, og gamle rapporter slettes aldrig. Trykker

@@ -66,7 +66,7 @@ input:disabled, select:disabled { opacity: 0.45; }
 .g4 { grid-template-columns: minmax(48px, 1fr) 90px 90px 96px max-content; column-gap: 20px; }
 .knapper { display: flex; flex-wrap: nowrap; justify-content: flex-end; align-items: center; gap: 8px; white-space: nowrap; }
 .knapper form { display: inline; margin: 0; }
-.knapper button.godkendt, .knapper button.godkendt:hover, .knapper button.godkendt:disabled { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); cursor: default; }
+.knapper button.godkendt, .knapper button.godkendt:hover, .knapper button.godkendt:disabled, .actions button.godkendt, .actions button.godkendt:hover, .actions button.godkendt:disabled { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); cursor: default; }
 .row.mangler { background: var(--warn-bg); box-shadow: inset 4px 0 0 var(--bad), inset 0 0 0 1.5px var(--bad); }
 .nm { font-weight: 500; margin: 0; }
 .mu { color: var(--text-2); font-size: 12px; margin: 0; }
@@ -78,6 +78,7 @@ input:disabled, select:disabled { opacity: 0.45; }
 .warn { background: var(--warn-bg); color: var(--warn); }
 .info { background: var(--info-bg); color: var(--info); }
 .actions { display: flex; gap: 10px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+.actions button:disabled:not(.godkendt), .actions button:disabled:not(.godkendt):hover { background: var(--surface); color: var(--text-2); cursor: default; opacity: 0.6; }
 .msg { font-size: 13px; }
 .msg.bad, .msg.ok { background: none; }
 .msg.bad { color: var(--bad); } .msg.ok { color: var(--ok); }

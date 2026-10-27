@@ -8,17 +8,18 @@
 </div>
 
 <div class="actions" style="margin-top:0">
-  <a class="btn" href="{% url 'rapport' beregning.pk %}" target="_blank" rel="noopener">Åbn PDF-rapport {{ beregning.rapport_id }}</a>
-  {% if koersel.status != 'godkendt' %}
+  {% if not kan_eksportere %}
   <form method="post">{% csrf_token %}<input type="hidden" name="handling" value="godkend_alle"><button class="primary" type="submit">Godkend alle</button></form>
   {% else %}
-  <span class="badge ok">Godkendt</span>
-  <form method="post">{% csrf_token %}<input type="hidden" name="handling" value="genaabn"><button type="submit">Genåbn til rettelser</button></form>
+  <button type="button" disabled class="godkendt" title="Alle medarbejdere er godkendt." aria-label="Alle medarbejdere er godkendt.">Godkend alle</button>
   {% endif %}
+  <form method="post">{% csrf_token %}<input type="hidden" name="handling" value="genaabn"><button type="submit">Genåbn til rettelser</button></form>
   {% if kan_eksportere %}
   <a class="btn" href="{% url 'eksport' koersel.pk %}">Eksportér lønudtræk (CSV)</a>
+  <a class="btn" href="{% url 'rapport' beregning.pk %}" target="_blank" rel="noopener">Åbn PDF-rapport {{ beregning.rapport_id }}</a>
   {% else %}
-  <span class="mu">Eksport er låst, til alle medarbejdere er godkendt.</span>
+  <button type="button" disabled title="Kan først bruges, når alle medarbejdere er godkendt." aria-label="Kan først bruges, når alle medarbejdere er godkendt.">Eksportér lønudtræk (CSV)</button>
+  <button type="button" disabled title="Kan først bruges, når alle medarbejdere er godkendt." aria-label="Kan først bruges, når alle medarbejdere er godkendt.">Åbn PDF-rapport {{ beregning.rapport_id }}</button>
   {% endif %}
 </div>
 
