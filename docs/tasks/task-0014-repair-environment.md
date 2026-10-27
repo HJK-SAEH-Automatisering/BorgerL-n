@@ -2,7 +2,7 @@
 nummer: task-0014
 titel: Reparationsscript, der gendanner pakker i .venv, som sikkerhedstjenesten har sat i karantæne
 kilde: interview
-status: planlagt
+status: i-gang
 oprettet: 2026-10-27
 ---
 
@@ -62,5 +62,36 @@ intet
 <Alt over denne overskrift ejes af architect. Alt herunder skrives kun af developer, som aldrig retter i definitionen ovenfor.>
 
 ### Hvad er lavet
+- `scripts/reparer_miljo.py`: scriptet, kun standardbiblioteket. Kommando fra projektmappen:
+  `.venv\Scripts\python.exe scripts\reparer_miljo.py`. Tjek-tilstand: `--tjek`. `.venv` findes fra scriptets egen placering (projektroden), ikke arbejdsmappen. (Færdig når 1, 6)
+  - Leder gennem site-packages efter `*.py.txt`, hvis første bytes (op til 512, med BOM håndteret for UTF-8 og UTF-16) er karantænebeskeden. (Færdig når 3)
+  - Pakke og udgave slås op via `*.dist-info`: først filens sti i RECORD, ellers øverste mappe/modul mod top_level.txt og RECORD. Navn og udgave fra METADATA. (Færdig når 3, 4)
+  - Gendannelse: `[venv-python, -m, pip, install, --force-reinstall, --no-deps, pakke==udgave]` via subprocess uden shell, én gang pr. pakke. Returkoden tjekkes. (Færdig når 4)
+  - Kontrol til sidst: `venv-python -I -c "import django, django.utils.cache"`, resultatet meldes. Mislykkes det, meldes den sidste fejllinje, og returkoden er 2. (Færdig når 5)
+  - Sundt miljø: melder "i orden" og afslutter med 0 uden at ændre noget. (Færdig når 2)
+  - Meddelelser på dansk, kun pakkenavne, udgaver og stier i site-packages. Slutmeldingen efter en reparation siger, at filen kan blive sat i karantæne igen, og at scriptet så køres igen. (Færdig når 7)
+  - Karantænefilerne røres ikke; scriptet sletter, omdøber eller skriver ingen filer selv. (Færdig når 8)
+  - Opdelt til test: `find_quarantine_files(mappe)`, `determine_package(mappe, fil)`, `build_restore_command(python, pakke)`, `run_command(kommando)` (selve kaldet; injiceres som `runner` i `main`), `check_import` (injiceres som `importer`).
+- `scripts/test_reparer_miljo.py` (23 tests, opdigtet mappe og dist-info, intet kald til pip): sundt miljø ændres ikke og melder det; karantænefil findes (også med BOM og UTF-16) og pakken meldes; `.py.txt` uden karantænetekst og andre filer med teksten ignoreres; tjek-tilstanden ændrer intet; kommandoen bygges for netop pakke og udgave; fejl i pip, import eller ukendt pakke giver fejlkode. (Færdig når 10)
+- `scripts/__init__.py`: tom fil, så `manage.py test` finder testene i `scripts/`. Det er den eneste ændring, der skulle til for at få dem med i Djangos testkørsel; selve testkørslen er uændret.
+- `README.md`: nyt afsnit "Når appen pludselig ikke starter" under "Til dig, der driver den", med kommandoen og `--tjek`. Rettet efter udtrykkelig besked fra architect om at gøre det. (Færdig når 9)
+- `CLAUDE.md`: tre linjer under Kommandoer (kommandoen, `--tjek`, unittest-kørslen), et kort afsnit om scriptet og en række i strukturtabellen. (Færdig når 9)
+
+Returkoder (mit valg, som du bad mig skrive): 0 = i orden eller gendannet; 1 = `--tjek` fandt karantænefiler; 2 = fejl (pip mislykkedes, Django kan ikke importeres efter reparationen eller i et ellers sundt miljø, filen hører til en pakke, der ikke kan bestemmes, eller `.venv` mangler). Tjek-tilstand med en ubestemmelig pakke giver også 2.
+
+Sådan køres testene: `.venv\Scripts\python.exe -m unittest scripts.test_reparer_miljo` (virker uden Django), og de indgår i `.venv\Scripts\python.exe manage.py test` (Django finder dem på grund af `scripts/__init__.py`).
+
+Kørt:
+- `manage.py test`: "Ran 123 tests ... OK" (heri de 23 nye; `manage.py test scripts` alene: "Found 23 test(s) ... OK").
+- `python -m unittest scripts.test_reparer_miljo`: "Ran 23 tests ... OK".
+- `makemigrations --check`: "No changes detected".
+- `scripts\reparer_miljo.py --tjek` mod den rigtige `.venv`: "Ingen filer er sat i karantæne i .venv. Django kan importeres. Miljøet er i orden. Intet er ændret." Returkode 0. Scriptet er ikke kørt i gendanne-tilstand mod den rigtige `.venv`, og der er ikke oprettet karantænefiler i den. Ingen spærring eller karantæne mødt.
+
 ### Hvad er ikke lavet, og hvorfor
+- Selve gendannelsen mod et rigtigt pakkeregister (pip) er ikke afprøvet; det måtte jeg ikke mod den rigtige `.venv`, og testene kalder ikke pip. Kommandoen er kun prøvet som liste i en test.
+- Linteren er ikke sat op i projektet; ikke kørt.
+
 ### Uklart
+- **Gammel karantænefil efter en reparation.** pip fjerner kun de filer, der står i RECORD; `cache.py.txt` står der ikke, så den ligger tilbage ved siden af den gendannede `cache.py`. Havde scriptet talt den med, ville den blive fundet igen og igen. Jeg har derfor valgt: en `.py.txt` med karantænetekst tæller kun som fund, hvis den originale `.py` ved siden af mangler. Det ændrer ikke filen (opgaven forbyder det), men er en fortolkning af "Find karantæne", som du bør bekræfte.
+- **Hvis pip selv er sat i karantæne**, kan scriptet ikke gendanne den med pip (pip mangler). Scriptet melder da, at gendannelsen mislykkedes, og afslutter med 2. Det er ikke løst; det er et nyt behov, ikke noget jeg har bygget.
+- **Status** er sat til `i-gang` i filens øverste linjer, som min rolle foreskriver. Den er ikke sat videre.
