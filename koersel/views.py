@@ -258,10 +258,10 @@ def godkend(request, pk):
             antal, var_godkendt = services.genaabn(beregning, request.user)
             if antal:
                 fjernet = "1 godkendelse er" if antal == 1 else f"{antal} godkendelser er"
-                messages.info(request, f"Kørslen er genåbnet. {fjernet} fjernet. Ret oplysningerne og kør en ny beregning, eller godkend igen.")
+                messages.info(request, f"Kørslen er genåbnet. {fjernet} fjernet. Godkend igen, eller ret oplysningerne under Undtagelser.")
             elif var_godkendt:
-                messages.info(request, "Kørslen er genåbnet. Ret oplysningerne og kør en ny beregning, eller godkend igen.")
-            return redirect("undtagelser", pk=pk)
+                messages.info(request, "Kørslen er genåbnet. Godkend igen, eller ret oplysningerne under Undtagelser.")
+            return redirect("godkend", pk=pk)
         if koersel.status == Koersel.Status.GODKENDT:
             return redirect("godkend", pk=pk)
         resultat_id = request.POST.get("resultat")

@@ -555,8 +555,18 @@ class FlowTests(TestCase):
         self.assertEqual(k.status, Koersel.Status.GODKENDT)
 
         svar = self.client.post(url, {"handling": "genaabn"}, follow=True)
-        self.assertRedirects(svar, reverse("undtagelser", args=[k.pk]))
-        self.assertContains(svar, "Kørslen er genåbnet. 2 godkendelser er fjernet.")
+        self.assertRedirects(svar, url)
+        self.assertContains(svar, "Kørslen er genåbnet. 2 godkendelser er fjernet. Godkend igen, eller ret oplysningerne under Undtagelser.")
+        # Siden man lander på, er Godkend-skærmen selv: ingen grønne rækkeknapper, Godkend alle aktiv, PDF og eksport låst
+        html = svar.content.decode()
+        start = html.index('<div class="actions"')
+        midt = html.index("<h2>Beregning pr. medarbejder</h2>", start)
+        slut = html.index("<h2>Tidligere beregninger for måneden</h2>", midt)
+        self.assertNotIn('class="godkendt"', html[midt:slut])
+        self.assertNotIn('class="godkendt"', html[start:midt])
+        self.assertIn('value="godkend_alle"', html[start:midt])
+        self.assertIn("Kan først bruges, når alle medarbejdere er godkendt.", html[start:midt])
+        self.assertNotIn(reverse("eksport", args=[k.pk]), html[start:midt])
 
         k.refresh_from_db()
         self.assertEqual(k.status, Koersel.Status.BEREGNET)
@@ -596,8 +606,8 @@ class FlowTests(TestCase):
         self.assertEqual(k.status, Koersel.Status.BEREGNET)
 
         svar = self.client.post(url, {"handling": "genaabn"}, follow=True)
-        self.assertRedirects(svar, reverse("undtagelser", args=[k.pk]))
-        self.assertContains(svar, "Kørslen er genåbnet. 1 godkendelse er fjernet.")
+        self.assertRedirects(svar, url)
+        self.assertContains(svar, "Kørslen er genåbnet. 1 godkendelse er fjernet. Godkend igen, eller ret oplysningerne under Undtagelser.")
         self.assertEqual(b.resultater.filter(godkendt=True).count(), 0)
         self.assertEqual(b.resultater.filter(godkendt_af__isnull=False).count(), 0)
         self.assertEqual(b.resultater.filter(godkendt_tidspunkt__isnull=False).count(), 0)
@@ -636,7 +646,7 @@ class FlowTests(TestCase):
         b = k.aktiv_beregning
         antal_logs = AuditLog.objects.count()
         svar = self.client.post(url, {"handling": "genaabn"}, follow=True)
-        self.assertRedirects(svar, reverse("undtagelser", args=[k.pk]))
+        self.assertRedirects(svar, url)
         self.assertNotContains(svar, "genåbnet")
         k.refresh_from_db()
         self.assertEqual(k.status, Koersel.Status.BEREGNET)
