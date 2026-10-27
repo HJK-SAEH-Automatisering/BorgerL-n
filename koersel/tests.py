@@ -556,7 +556,7 @@ class FlowTests(TestCase):
 
         svar = self.client.post(url, {"handling": "genaabn"}, follow=True)
         self.assertRedirects(svar, url)
-        self.assertContains(svar, "Kørslen er genåbnet. 2 godkendelser er fjernet. Godkend igen, eller ret oplysningerne under Undtagelser.")
+        self.assertContains(svar, "Kørslen er genåbnet. 2 godkendelser er fjernet. Godkend igen, eller ret oplysningerne under Undtagelser og kør en ny beregning.")
         # Siden man lander på, er Godkend-skærmen selv: ingen grønne rækkeknapper, Godkend alle aktiv, PDF og eksport låst
         html = svar.content.decode()
         start = html.index('<div class="actions"')
@@ -607,7 +607,7 @@ class FlowTests(TestCase):
 
         svar = self.client.post(url, {"handling": "genaabn"}, follow=True)
         self.assertRedirects(svar, url)
-        self.assertContains(svar, "Kørslen er genåbnet. 1 godkendelse er fjernet. Godkend igen, eller ret oplysningerne under Undtagelser.")
+        self.assertContains(svar, "Kørslen er genåbnet. 1 godkendelse er fjernet. Godkend igen, eller ret oplysningerne under Undtagelser og kør en ny beregning.")
         self.assertEqual(b.resultater.filter(godkendt=True).count(), 0)
         self.assertEqual(b.resultater.filter(godkendt_af__isnull=False).count(), 0)
         self.assertEqual(b.resultater.filter(godkendt_tidspunkt__isnull=False).count(), 0)
