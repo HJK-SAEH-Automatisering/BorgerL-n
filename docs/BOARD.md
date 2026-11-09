@@ -29,7 +29,6 @@ eller nummeret på den rapport opgaven kom af.>
 
 | Emne |
 |---|
-| Indfør versionsnummer, start på 0.1.0, før første udrulning |
 
 <Den grove liste: hvad architect kan se der skal laves. **Ingen numre.**
 Et emne får først et nummer når interviewet har gjort det udførbart —
@@ -54,6 +53,7 @@ ellers fyldes `docs/tasks/` med halve idéer.>
 | task-0013 | Knapperne øverst på Godkend-skærmen i ny rækkefølge, med PDF og eksport låst til alle er godkendt | bygget |
 | task-0014 | Reparationsscript, der gendanner pakker i .venv, som sikkerhedstjenesten har sat i karantæne | bygget |
 | task-0015 | En forældet beregning kan ikke godkendes eller eksporteres | bygget |
+| task-0016 | Indfør versionsnummer 0.1.0, vist i bunden af skærmene og gemt i hver beregning | bygget |
 
 <`Udfald` er `bygget` eller `afvist`. Flyt hertil når architect har vurderet
 opgaven — ikke når udrulningen er sket; udrulning er ikke en status.

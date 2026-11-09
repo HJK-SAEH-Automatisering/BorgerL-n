@@ -17,6 +17,10 @@ def load_env(path):
 
 load_env(BASE_DIR / ".env")
 
+# Appens versionsnummer. Det eneste sted, nummeret står; skabeloner og snapshot læser det herfra.
+# Det skiftes kun ved en udrulning, når mennesket har bedt om det.
+APP_VERSION = "0.1.0"
+
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
@@ -62,6 +66,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "config.context_processors.app_version",
             ],
         },
     },

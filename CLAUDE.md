@@ -48,6 +48,15 @@ Indstillinger læses fra processens miljøvariabler. En `.env` i projektroden in
 (`python-dotenv`, øverst i `config/settings.py`); maskinens egne variabler vinder over filen.
 Nøglerne står i `.env.example`.
 
+## Versionsnummer
+
+Appens nummer står ét sted: `APP_VERSION` i `config/settings.py` (nu 0.1.0). Bunden af alle skærme
+(via kontekstbehandleren i `config/context_processors.py`) og hvert snapshots nøgle `app_version`
+læser det derfra; skriv det ikke andre steder. Snapshottets `version` er formatet og noget andet.
+PDF-rapporten viser ikke nummeret. Nummeret skiftes kun ved en udrulning, og kun når mennesket har
+bedt om det: nye funktioner hæver midterste del (0.2.0), rettelser sidste del (0.1.1), og 1.0.0 er
+den første udgave, der bruges rigtigt i drift.
+
 ## Struktur
 
 | Mappe | Indhold |

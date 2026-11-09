@@ -5,6 +5,7 @@ import json
 from collections import Counter
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
@@ -179,6 +180,7 @@ def koer_beregning(koersel: Koersel, bruger) -> Beregningskoersel:
     snapshot = {
         "version": 1,
         "rapport_layout": LAYOUT_VERSION,
+        "app_version": settings.APP_VERSION,
         "rapport_id": f"{koersel.maaned:%Y-%m}-{nummer:03d}",
         "maaned": f"{koersel.maaned:%Y-%m}",
         "maaned_tekst": maanedsnavn(koersel.maaned),
