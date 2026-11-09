@@ -38,6 +38,9 @@ Hver gang du trykker "Beregn", gemmes en PDF-rapport med udregningen for hver me
 CPR-nummer og adresse. Rapporterne kan ikke ændres, og gamle rapporter slettes aldrig. Trykker
 du "Beregn" igen, bortfalder de tidligere godkendelser. CPR-numre vises kun maskeret i appen.
 
+Nederst på hver skærm står appens navn og udgavenummer, fx "MedarbejderLøn 0.1.0". Oplys det,
+når du melder en fejl.
+
 ## Til dig, der driver den
 
 ### Kom i gang (Windows)
@@ -96,6 +99,14 @@ kun, hvad der er galt, uden at ændre noget. Filen kan blive sat i karantæne ig
 scriptet igen.
 Melder scriptet en fejl, fx fordi selve pakkeværktøjet er ramt, slettes `.venv`, og den bygges
 forfra med de tre første linjer under "Kom i gang".
+
+### Versionsnummer
+
+Udgavenummeret står ét sted: `APP_VERSION` i `config/settings.py`. Det vises nederst på skærmene,
+og hver ny beregning gemmer det i sit snapshot (som `app_version`). Ældre beregninger har det
+ikke. Rapporten som PDF viser det ikke. Nummeret skiftes kun ved en udrulning: nye funktioner
+hæver midterste del (0.2.0), rettelser sidste del (0.1.1), og 1.0.0 er den første udgave, der
+bruges rigtigt i drift.
 
 ### Kontrol af en gemt rapport
 

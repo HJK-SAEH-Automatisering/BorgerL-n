@@ -2,7 +2,7 @@
 nummer: task-0016
 titel: Indfør versionsnummer 0.1.0, vist i bunden af skærmene og gemt i hver beregning
 kilde: interview
-status: i-gang
+status: afsluttet
 oprettet: 2026-11-09
 ---
 
