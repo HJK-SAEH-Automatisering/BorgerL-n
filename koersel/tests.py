@@ -1,16 +1,18 @@
 import hashlib
+import json
 import re
 import shutil
 import tempfile
 from datetime import date, time, timedelta
 from decimal import Decimal
 from html.parser import HTMLParser
-from io import BytesIO
+from io import BytesIO, StringIO
 from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -23,7 +25,7 @@ from register.models import Borger
 
 from . import services
 from .importer import ImportFejl, laes_timefil
-from .models import Koersel, Linje
+from .models import Beregningskoersel, Koersel, Linje
 
 
 def xlsx(raekker, header=("Navn", "Total timer (timer:minutter)"), navn="timer.xlsx"):
@@ -1266,6 +1268,56 @@ class FlowTests(TestCase):
         self.assertIn("antal medarbejdere", pdf)
         self.assertIn("hver medarbejder", pdf)
         self.assertNotIn("borger", pdf)
+
+    def test_bunden_af_skaermene_viser_appens_navn_og_versionsnummer(self):
+        self.assertEqual(settings.APP_VERSION, "0.1.0")
+        for navn in ("dashboard", "borger_liste"):
+            html = self.client.get(reverse(navn)).content.decode()
+            self.assertIn("MedarbejderLøn 0.1.0", synlig_tekst(html).replace(" ", " "), navn)
+        self.client.logout()
+        html = self.client.get(reverse("login")).content.decode()
+        self.assertIn("MedarbejderLøn 0.1.0", synlig_tekst(html))
+
+    def test_ny_beregning_gemmer_versionsnummer_og_aendrer_intet_andet_i_snapshottet(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        data = k.beregninger.get().data
+        self.assertEqual(data["app_version"], settings.APP_VERSION)
+        self.assertEqual(data["version"], 1)
+        self.assertEqual(data["rapport_layout"], LAYOUT_VERSION)
+        self.assertEqual(
+            set(data),
+            {"version", "rapport_layout", "app_version", "rapport_id", "maaned", "maaned_tekst", "tidspunkt_tekst", "bruger", "filnavn", "parametre", "zonepriser", "totaler", "linjer"},
+        )
+
+    def test_gammel_beregning_uden_versionsnummer_kan_vises_og_kontrolleres(self):
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        b = k.beregninger.get()
+        data = b.data
+        del data["app_version"]
+        Beregningskoersel.objects.filter(pk=b.pk).update(snapshot=json.dumps(data, ensure_ascii=False))
+        b.refresh_from_db()
+        self.assertNotIn("app_version", b.data)
+        self.assertEqual(self.client.get(reverse("rapport", args=[b.pk])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("godkend", args=[k.pk])).status_code, 200)
+        ud = StringIO()
+        call_command("verificer_rapport", b.rapport_id, stdout=ud)
+        self.assertIn("den gemte PDF er uændret", ud.getvalue())
+        self.assertIn("identisk", ud.getvalue())
+
+    def test_pdf_er_uaendret_af_versionsnummeret(self):
+        self.assertEqual(LAYOUT_VERSION, 2)
+        k = self.opret_og_upload([("Person 1", "44:12"), ("Person 2", "10:00")])
+        self.undtagelser(k)
+        b = k.beregninger.get()
+        uden = {n: v for n, v in b.data.items() if n != "app_version"}
+        self.assertEqual(lav_rapport(b.data), lav_rapport(uden))
+        self.assertEqual(hashlib.sha256(lav_rapport(uden)).hexdigest(), b.pdf_sha256)
+        self.assertEqual(b.data["rapport_layout"], 2)
+        with mock.patch.object(rl_config, "pageCompression", 0), mock.patch.object(rl_config, "useA85", 0):
+            pdf = lav_rapport(b.data).decode("latin-1")
+        self.assertNotIn(settings.APP_VERSION, pdf)
 
     def test_kraever_login(self):
         self.client.logout()
